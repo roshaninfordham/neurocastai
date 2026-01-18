@@ -97,7 +97,8 @@ export default function App() {
         extraction: 'complete',
         numeric: 'complete',
         routing: 'complete'
-      }
+      },
+      pipelineEvents: demoData.pipelineEvents || []
     };
 
     setCases(prev => ({ ...prev, [newCase.id]: newCase }));
@@ -165,7 +166,8 @@ export default function App() {
         extraction: partialCase.uploadedDocument ? 'complete' : 'pending',
         numeric: 'complete',
         routing: 'complete'
-      }
+      },
+      pipelineEvents: []
     };
 
     // Run pipeline simulation

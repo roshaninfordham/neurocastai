@@ -1,3 +1,5 @@
+import type { PipelineEvent } from '@neurocast/shared';
+
 export type WorkflowState = 'PROCEED' | 'HOLD' | 'ESCALATE';
 export type FacilityType = 'spoke' | 'hub';
 export type ArrivalMode = 'EMS' | 'walk-in';
@@ -81,6 +83,7 @@ export interface CaseData {
     numeric: PipelineStatus;
     routing: PipelineStatus;
   };
+  pipelineEvents?: PipelineEvent[];
 }
 
 export interface VoiceAnnouncement {

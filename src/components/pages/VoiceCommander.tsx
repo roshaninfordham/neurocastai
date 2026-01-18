@@ -128,7 +128,7 @@ export function VoiceCommander({ caseData, announcements, onBack, onAnnounce }: 
                 <Switch
                   id="voice-enabled"
                   checked={voiceEnabled}
-                  onCheckedChange={setVoiceEnabled}
+                  onCheckedChange={(checked: boolean) => setVoiceEnabled(checked)}
                 />
               </div>
 
@@ -140,7 +140,7 @@ export function VoiceCommander({ caseData, announcements, onBack, onAnnounce }: 
                   <Switch
                     id="announce-state"
                     checked={announceStateChanges}
-                    onCheckedChange={setAnnounceStateChanges}
+                    onCheckedChange={(checked: boolean) => setAnnounceStateChanges(checked)}
                     disabled={!voiceEnabled}
                   />
                 </div>
@@ -151,7 +151,7 @@ export function VoiceCommander({ caseData, announcements, onBack, onAnnounce }: 
                   <Switch
                     id="announce-missing"
                     checked={announceMissing}
-                    onCheckedChange={setAnnounceMissing}
+                    onCheckedChange={(checked: boolean) => setAnnounceMissing(checked)}
                     disabled={!voiceEnabled}
                   />
                 </div>

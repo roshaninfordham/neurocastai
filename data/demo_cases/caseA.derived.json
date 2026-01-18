@@ -1,0 +1,313 @@
+{
+  "caseId": "NC-2026-001A",
+  "runId": "run-2026-001A-001",
+  "status": "DONE",
+  "outputs": {
+    "compression": {
+      "provider": "TOKENCO",
+      "originalTokenEstimate": 1247,
+      "compressedTokenEstimate": 342,
+      "savingsPct": 72.6,
+      "compressedTextPreview": "68M with witnessed onset ~90min ago, on Apixaban for Afib, CTA pending.",
+      "notes": "Synthetic demo packet; compression used only for coordination tooling."
+    },
+    "riskFlags": [
+      {
+        "id": "R-DOAC-001",
+        "label": "Anticoagulant present (Apixaban)",
+        "severity": "CRITICAL",
+        "confidence": "HIGH",
+        "category": "MEDS",
+        "evidence": {
+          "quote": "Medications: ... Apixaban 5mg BID",
+          "sourceAnchor": "Transfer Packet → Medications → Line 6",
+          "docType": "TRANSFER_PACKET"
+        },
+        "coordinationGuidance": "Escalate to stroke specialist to review anticoagulant timing and reversal options before intervention.",
+        "includeInHandoffByDefault": true
+      },
+      {
+        "id": "R-BP-001",
+        "label": "Elevated blood pressure on arrival",
+        "severity": "WARNING",
+        "confidence": "HIGH",
+        "category": "VITALS",
+        "evidence": {
+          "quote": "Vitals on arrival: BP 165/95, HR 88, SpO2 96%",
+          "sourceAnchor": "Transfer Packet → Vitals → Line 10",
+          "docType": "TRANSFER_PACKET"
+        },
+        "coordinationGuidance": "Coordinate with receiving team on BP targets and IV access before transfer.",
+        "includeInHandoffByDefault": true
+      }
+    ],
+    "numeric": {
+      "provider": "WOOD_WIDE",
+      "derivedTimers": {
+        "timeSinceLKWMin": 90,
+        "doorToCTMin": 10,
+        "ctToDecisionMin": 10,
+        "etaToCenterMin": 45
+      },
+      "stability": {
+        "status": "BORDERLINE",
+        "reasons": [
+          "SBP > 160 at spoke ED"
+        ]
+      },
+      "completeness": {
+        "scorePct": 82,
+        "missing": [
+          "CTA result confirmation",
+          "Last Apixaban dose timing",
+          "Coagulation labs"
+        ]
+      },
+      "anomalies": [
+        {
+          "name": "Blood pressure elevated",
+          "value": "165/95",
+          "severity": "MED"
+        }
+      ]
+    },
+    "decision": {
+      "state": "HOLD",
+      "reason": "Critical anticoagulant detected (Apixaban) — specialist review required before proceeding.",
+      "triggeredRules": [
+        {
+          "id": "R-DOAC-001",
+          "name": "DOAC Anticoagulant Check",
+          "explanation": "When a DOAC is present, specialist review is required due to bleeding risk."
+        }
+      ],
+      "nextSteps": [
+        "Escalate to telestroke neurologist immediately.",
+        "Verify last Apixaban dose timing with family or pharmacy.",
+        "Obtain coagulation panel if available.",
+        "Confirm CTA results for hemorrhage exclusion.",
+        "Prepare reversal agent availability assessment."
+      ],
+      "safetyNote": "Coordination only. No diagnosis."
+    },
+    "handoff": {
+      "header": {
+        "caseId": "NC-2026-001A",
+        "facilityType": "SPOKE_ED",
+        "arrivalMode": "EMS",
+        "workflowState": "HOLD",
+        "completenessScorePct": 82
+      },
+      "timelineTable": [
+        {
+          "event": "Last known well",
+          "time": "2026-01-01T10:30:00Z",
+          "interval": "90 min before current time"
+        },
+        {
+          "event": "ED arrival",
+          "time": "2026-01-01T11:40:00Z",
+          "interval": "20 min before CT"
+        },
+        {
+          "event": "CT start",
+          "time": "2026-01-01T11:50:00Z",
+          "interval": "10 min before CTA result"
+        }
+      ],
+      "vitalsSummary": {
+        "hr": 88,
+        "bp": "165/95",
+        "spo2": "96%",
+        "glucose": "160 mg/dL",
+        "stability": "Borderline blood pressure; otherwise stable."
+      },
+      "risks": [
+        {
+          "severity": "CRITICAL",
+          "label": "Anticoagulant present (Apixaban)",
+          "evidenceQuote": "Medications: ... Apixaban 5mg BID",
+          "sourceAnchor": "Transfer Packet → Medications → Line 6",
+          "confidence": "HIGH"
+        },
+        {
+          "severity": "WARNING",
+          "label": "Elevated blood pressure",
+          "evidenceQuote": "Vitals on arrival: BP 165/95, HR 88, SpO2 96%",
+          "sourceAnchor": "Transfer Packet → Vitals → Line 10",
+          "confidence": "HIGH"
+        }
+      ],
+      "missingInfoChecklist": [
+        "Confirm last Apixaban dose timing.",
+        "Confirm CTA result and any hemorrhage findings.",
+        "Confirm coagulation panel results if available."
+      ],
+      "coordinationNextSteps": [
+        "Connect telestroke neurologist with spoke ED team.",
+        "Align on anticoagulant reversal plan if intervention pursued.",
+        "Confirm transfer destination and ETA."
+      ],
+      "export": {
+        "text": "NC-2026-001A • HOLD • Anticoagulant (Apixaban) present. Coordinate specialist review and reversal planning before intervention."
+      }
+    },
+    "voice": {
+      "pushAlertsEnabled": true,
+      "lastAnnouncement": "Routing HOLD due to anticoagulant risk. Neurologist review recommended.",
+      "allowedQuestionTypes": [
+        "What risks are present?",
+        "What information is missing?",
+        "What are the next coordination steps?"
+      ],
+      "blockedTopics": [
+        "Diagnosis",
+        "Treatment dosing",
+        "Prognosis"
+      ]
+    }
+  },
+  "metrics": {
+    "totalLatencyMs": 3200,
+    "stageLatenciesMs": {
+      "INGEST": 200,
+      "COMPRESS": 800,
+      "EXTRACT": 900,
+      "NUMERIC": 400,
+      "ROUTE": 300,
+      "PACKET": 600
+    },
+    "tokenUsage": {
+      "inputTokens": 1247,
+      "outputTokens": 420,
+      "compressionTokens": 342
+    },
+    "costUsdEstimate": 0.12,
+    "errorCount": 0
+  },
+  "events": [
+    {
+      "id": "case-a-evt-1",
+      "time": "2026-01-01T12:00:00Z",
+      "eventType": "STEP_STARTED",
+      "step": "INGEST",
+      "message": "Ingesting case NC-2026-001A from spoke ED",
+      "payload": {
+        "sourceType": "SIMULATED"
+      }
+    },
+    {
+      "id": "case-a-evt-2",
+      "time": "2026-01-01T12:00:01Z",
+      "eventType": "STEP_DONE",
+      "step": "INGEST",
+      "message": "Basic fields validated and queued for processing",
+      "payload": {
+        "fieldsValidated": 8
+      }
+    },
+    {
+      "id": "case-a-evt-3",
+      "time": "2026-01-01T12:00:02Z",
+      "eventType": "STEP_STARTED",
+      "step": "COMPRESS",
+      "message": "TokenCo compression started for transfer packet",
+      "payload": {
+        "provider": "TOKENCO"
+      }
+    },
+    {
+      "id": "case-a-evt-4",
+      "time": "2026-01-01T12:00:03Z",
+      "eventType": "STEP_DONE",
+      "step": "COMPRESS",
+      "message": "Compression completed with token savings",
+      "payload": {
+        "originalTokens": 1247,
+        "compressedTokens": 342,
+        "savingsPct": 72.6
+      }
+    },
+    {
+      "id": "case-a-evt-5",
+      "time": "2026-01-01T12:00:04Z",
+      "eventType": "STEP_STARTED",
+      "step": "EXTRACT",
+      "message": "Context agent scanning for anticoagulant and timeline risks",
+      "payload": {
+        "rulesEvaluated": 7
+      }
+    },
+    {
+      "id": "case-a-evt-6",
+      "time": "2026-01-01T12:00:05Z",
+      "eventType": "STEP_PROGRESS",
+      "step": "EXTRACT",
+      "message": "Potential DOAC mention detected — verifying evidence span",
+      "payload": {
+        "candidateRiskId": "risk-1"
+      }
+    },
+    {
+      "id": "case-a-evt-7",
+      "time": "2026-01-01T12:00:06Z",
+      "eventType": "STEP_DONE",
+      "step": "EXTRACT",
+      "message": "Risk flags extracted from packet",
+      "payload": {
+        "riskFlagsRaised": [
+          "risk-1",
+          "risk-2",
+          "risk-3"
+        ]
+      }
+    },
+    {
+      "id": "case-a-evt-8",
+      "time": "2026-01-01T12:00:07Z",
+      "eventType": "STEP_STARTED",
+      "step": "NUMERIC",
+      "message": "Computing numeric timers and completeness scores",
+      "payload": {
+        "timers": [
+          "timeSinceLKWMin",
+          "doorToCTMin"
+        ]
+      }
+    },
+    {
+      "id": "case-a-evt-9",
+      "time": "2026-01-01T12:00:08Z",
+      "eventType": "STEP_DONE",
+      "step": "NUMERIC",
+      "message": "Numeric metrics computed for case NC-2026-001A",
+      "payload": {
+        "completenessScorePct": 82
+      }
+    },
+    {
+      "id": "case-a-evt-10",
+      "time": "2026-01-01T12:00:09Z",
+      "eventType": "STEP_STARTED",
+      "step": "ROUTE",
+      "message": "Evaluating deterministic routing policy gates",
+      "payload": {
+        "policyVersion": "v1.0.0"
+      }
+    },
+    {
+      "id": "case-a-evt-11",
+      "time": "2026-01-01T12:00:10Z",
+      "eventType": "STEP_DONE",
+      "step": "ROUTE",
+      "message": "Routing decision HOLD due to DOAC risk flag",
+      "payload": {
+        "state": "HOLD",
+        "contributingRiskIds": [
+          "risk-1"
+        ]
+      }
+    }
+  ]
+}
+

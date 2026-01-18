@@ -1,0 +1,291 @@
+{
+  "caseId": "NC-2026-003C",
+  "runId": "run-2026-003C-001",
+  "status": "DONE",
+  "outputs": {
+    "compression": {
+      "provider": "TOKENCO",
+      "originalTokenEstimate": 1100,
+      "compressedTokenEstimate": 320,
+      "savingsPct": 70.9,
+      "compressedTextPreview": "72M with clear onset, M1 occlusion confirmed, no major contraindications.",
+      "notes": "Clean LVO pathway; packet compressed for coordination cards."
+    },
+    "riskFlags": [
+      {
+        "id": "R-LVO-001",
+        "label": "M1 occlusion confirmed",
+        "severity": "INFO",
+        "confidence": "HIGH",
+        "category": "IMAGING",
+        "evidence": {
+          "quote": "CTA – M1 occlusion confirmed.",
+          "sourceAnchor": "Transfer Packet → Imaging → Line 10",
+          "docType": "IMAGING_REPORT"
+        },
+        "coordinationGuidance": "Activate thrombectomy-capable center; emphasize time-critical nature of large vessel occlusion.",
+        "includeInHandoffByDefault": true
+      },
+      {
+        "id": "R-ASA-001",
+        "label": "Aspirin use (81mg daily)",
+        "severity": "INFO",
+        "confidence": "HIGH",
+        "category": "MEDS",
+        "evidence": {
+          "quote": "Medications: Amlodipine, Atorvastatin, Aspirin 81mg daily.",
+          "sourceAnchor": "Transfer Packet → Medications → Line 6",
+          "docType": "TRANSFER_PACKET"
+        },
+        "coordinationGuidance": "Include in handoff for awareness; does not delay mechanical thrombectomy.",
+        "includeInHandoffByDefault": true
+      }
+    ],
+    "numeric": {
+      "provider": "WOOD_WIDE",
+      "derivedTimers": {
+        "timeSinceLKWMin": 75,
+        "doorToCTMin": 7,
+        "ctToDecisionMin": 5,
+        "etaToCenterMin": 30
+      },
+      "stability": {
+        "status": "STABLE",
+        "reasons": []
+      },
+      "completeness": {
+        "scorePct": 94,
+        "missing": []
+      },
+      "anomalies": []
+    },
+    "decision": {
+      "state": "PROCEED",
+      "reason": "Clear onset, M1 occlusion confirmed, and no major contraindications identified.",
+      "triggeredRules": [
+        {
+          "id": "R-LVO-001",
+          "name": "LVO confirmed + within window",
+          "explanation": "Large vessel occlusion with favorable timeline and no stops triggers PROCEED."
+        }
+      ],
+      "nextSteps": [
+        "Activate receiving thrombectomy team.",
+        "Arrange immediate transfer from spoke ED.",
+        "Confirm ETA and transport method.",
+        "Send complete handoff packet including imaging summary."
+      ],
+      "safetyNote": "Coordination only. No diagnosis."
+    },
+    "handoff": {
+      "header": {
+        "caseId": "NC-2026-003C",
+        "facilityType": "SPOKE_ED",
+        "arrivalMode": "EMS",
+        "workflowState": "PROCEED",
+        "completenessScorePct": 94
+      },
+      "timelineTable": [
+        {
+          "event": "Last known well",
+          "time": "2026-01-03T10:15:00Z",
+          "interval": "75 min before decision"
+        },
+        {
+          "event": "ED arrival",
+          "time": "2026-01-03T11:18:00Z",
+          "interval": "63 min after last-known-well"
+        },
+        {
+          "event": "CT start",
+          "time": "2026-01-03T11:25:00Z",
+          "interval": "7 min after ED arrival"
+        },
+        {
+          "event": "CTA result",
+          "time": "2026-01-03T11:28:00Z",
+          "interval": "3 min after CT"
+        }
+      ],
+      "vitalsSummary": {
+        "hr": 72,
+        "bp": "156/82",
+        "spo2": "97%",
+        "glucose": null,
+        "stability": "Stable vitals; within acceptable range."
+      },
+      "risks": [
+        {
+          "severity": "INFO",
+          "label": "M1 occlusion confirmed",
+          "evidenceQuote": "CTA – M1 occlusion confirmed.",
+          "sourceAnchor": "Transfer Packet → Imaging → Line 10",
+          "confidence": "HIGH"
+        },
+        {
+          "severity": "INFO",
+          "label": "Aspirin 81mg daily",
+          "evidenceQuote": "Medications: Amlodipine, Atorvastatin, Aspirin 81mg daily.",
+          "sourceAnchor": "Transfer Packet → Medications → Line 6",
+          "confidence": "HIGH"
+        }
+      ],
+      "missingInfoChecklist": [],
+      "coordinationNextSteps": [
+        "Confirm activation of thrombectomy team.",
+        "Share ETA and transport details.",
+        "Confirm imaging is pushed to receiving PACS."
+      ],
+      "export": {
+        "text": "NC-2026-003C • PROCEED • Clear onset and M1 occlusion, no major contraindications. Proceed with transfer and thrombectomy activation."
+      }
+    },
+    "voice": {
+      "pushAlertsEnabled": true,
+      "lastAnnouncement": "Routing PROCEED — activate thrombectomy team and prepare transfer.",
+      "allowedQuestionTypes": [
+        "What is the routing decision?",
+        "What evidence supports this decision?",
+        "What are the coordination next steps?"
+      ],
+      "blockedTopics": [
+        "Diagnosis",
+        "Treatment dosing",
+        "Prognosis"
+      ]
+    }
+  },
+  "metrics": {
+    "totalLatencyMs": 2600,
+    "stageLatenciesMs": {
+      "INGEST": 200,
+      "COMPRESS": 700,
+      "EXTRACT": 800,
+      "NUMERIC": 300,
+      "ROUTE": 250,
+      "PACKET": 350
+    },
+    "tokenUsage": {
+      "inputTokens": 1100,
+      "outputTokens": 390,
+      "compressionTokens": 320
+    },
+    "costUsdEstimate": 0.11,
+    "errorCount": 0
+  },
+  "events": [
+    {
+      "id": "case-c-evt-1",
+      "time": "2026-01-03T11:30:00Z",
+      "eventType": "STEP_STARTED",
+      "step": "INGEST",
+      "message": "Ingesting case NC-2026-003C with clear onset and imaging",
+      "payload": {
+        "imagingAvailable": true
+      }
+    },
+    {
+      "id": "case-c-evt-2",
+      "time": "2026-01-03T11:30:01Z",
+      "eventType": "STEP_DONE",
+      "step": "INGEST",
+      "message": "Core timing and facility fields validated",
+      "payload": {
+        "fieldsValidated": 9
+      }
+    },
+    {
+      "id": "case-c-evt-3",
+      "time": "2026-01-03T11:30:02Z",
+      "eventType": "STEP_STARTED",
+      "step": "COMPRESS",
+      "message": "TokenCo compression started for packet text",
+      "payload": {
+        "provider": "TOKENCO"
+      }
+    },
+    {
+      "id": "case-c-evt-4",
+      "time": "2026-01-03T11:30:03Z",
+      "eventType": "STEP_DONE",
+      "step": "COMPRESS",
+      "message": "Compression finished within budget",
+      "payload": {
+        "originalTokens": 1100,
+        "compressedTokens": 320,
+        "savingsPct": 70.9
+      }
+    },
+    {
+      "id": "case-c-evt-5",
+      "time": "2026-01-03T11:30:04Z",
+      "eventType": "STEP_STARTED",
+      "step": "EXTRACT",
+      "message": "Context agent extracting LVO evidence and contraindications",
+      "payload": {
+        "rulesEvaluated": 6
+      }
+    },
+    {
+      "id": "case-c-evt-6",
+      "time": "2026-01-03T11:30:05Z",
+      "eventType": "STEP_DONE",
+      "step": "EXTRACT",
+      "message": "Risk flags updated with M1 occlusion and aspirin use",
+      "payload": {
+        "riskFlagsRaised": [
+          "risk-c1",
+          "risk-c2"
+        ]
+      }
+    },
+    {
+      "id": "case-c-evt-7",
+      "time": "2026-01-03T11:30:06Z",
+      "eventType": "STEP_STARTED",
+      "step": "NUMERIC",
+      "message": "Computing timers and completeness for clean LVO",
+      "payload": {
+        "timers": [
+          "timeSinceLKWMin",
+          "doorToCTMin",
+          "ctToDecisionMin"
+        ]
+      }
+    },
+    {
+      "id": "case-c-evt-8",
+      "time": "2026-01-03T11:30:07Z",
+      "eventType": "STEP_DONE",
+      "step": "NUMERIC",
+      "message": "Numeric metrics computed — all within expected windows",
+      "payload": {
+        "completenessScorePct": 94
+      }
+    },
+    {
+      "id": "case-c-evt-9",
+      "time": "2026-01-03T11:30:08Z",
+      "eventType": "STEP_STARTED",
+      "step": "ROUTE",
+      "message": "Evaluating final routing policy for thrombectomy transfer",
+      "payload": {
+        "policyVersion": "v1.0.0"
+      }
+    },
+    {
+      "id": "case-c-evt-10",
+      "time": "2026-01-03T11:30:09Z",
+      "eventType": "STEP_DONE",
+      "step": "ROUTE",
+      "message": "Routing decision PROCEED — activate receiving thrombectomy team",
+      "payload": {
+        "state": "PROCEED",
+        "contributingRiskIds": [
+          "risk-c1"
+        ]
+      }
+    }
+  ]
+}
+

@@ -1,0 +1,62 @@
+{
+  "caseId": "NC-2026-002B",
+  "createdAt": "2026-01-02T09:00:00Z",
+  "facility": {
+    "type": "SPOKE_ED",
+    "name": "Memorial ED"
+  },
+  "arrivalMode": "WALK_IN",
+  "patient": {
+    "age": 54,
+    "sex": "F",
+    "weightKg": 70
+  },
+  "timeline": [
+    {
+      "type": "LAST_KNOWN_WELL",
+      "time": "2026-01-01T22:00:00Z",
+      "source": "UNKNOWN",
+      "certainty": "UNKNOWN"
+    },
+    {
+      "type": "ED_ARRIVAL",
+      "time": "2026-01-02T08:45:00Z",
+      "source": "ED",
+      "certainty": "EXACT"
+    },
+    {
+      "type": "DECISION_TIME",
+      "time": "2026-01-02T09:00:00Z",
+      "source": "ED",
+      "certainty": "EXACT"
+    }
+  ],
+  "packet": {
+    "sourceType": "SIMULATED",
+    "rawText": "Synthetic packet: 54F with wake-up stroke pattern and incomplete medication history.",
+    "hasMedsList": false,
+    "hasImagingReport": false,
+    "declaredSynthetic": true,
+    "consentAcknowledged": true
+  },
+  "telemetry": {
+    "mode": "SIMULATED",
+    "vitals": [
+      {
+        "time": "2026-01-02T08:45:00Z",
+        "hr": 76,
+        "sbp": 148,
+        "dbp": 88,
+        "spo2": 98
+      },
+      {
+        "time": "2026-01-02T08:55:00Z",
+        "hr": 78,
+        "sbp": 150,
+        "dbp": 90,
+        "spo2": 98
+      }
+    ]
+  }
+}
+

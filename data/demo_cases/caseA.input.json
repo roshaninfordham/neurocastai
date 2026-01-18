@@ -1,0 +1,76 @@
+{
+  "caseId": "NC-2026-001A",
+  "createdAt": "2026-01-01T12:00:00Z",
+  "facility": {
+    "type": "SPOKE_ED",
+    "name": "County General Hospital"
+  },
+  "arrivalMode": "EMS",
+  "patient": {
+    "age": 68,
+    "sex": "M",
+    "weightKg": 82
+  },
+  "timeline": [
+    {
+      "type": "LAST_KNOWN_WELL",
+      "time": "2026-01-01T10:30:00Z",
+      "source": "ED",
+      "certainty": "EXACT"
+    },
+    {
+      "type": "ED_ARRIVAL",
+      "time": "2026-01-01T11:40:00Z",
+      "source": "EMS",
+      "certainty": "ESTIMATED"
+    },
+    {
+      "type": "CT_START",
+      "time": "2026-01-01T11:50:00Z",
+      "source": "ED",
+      "certainty": "EXACT"
+    },
+    {
+      "type": "CTA_RESULT",
+      "time": "2026-01-01T11:55:00Z",
+      "source": "SYSTEM",
+      "certainty": "EXACT"
+    },
+    {
+      "type": "DECISION_TIME",
+      "time": "2026-01-01T12:00:00Z",
+      "source": "ED",
+      "certainty": "EXACT"
+    }
+  ],
+  "packet": {
+    "sourceType": "SIMULATED",
+    "rawText": "Synthetic transfer packet: 68M with right-sided weakness, on Apixaban for Afib, CTA pending.",
+    "hasMedsList": true,
+    "hasImagingReport": true,
+    "declaredSynthetic": true,
+    "consentAcknowledged": true
+  },
+  "telemetry": {
+    "mode": "SIMULATED",
+    "vitals": [
+      {
+        "time": "2026-01-01T11:40:00Z",
+        "hr": 88,
+        "sbp": 165,
+        "dbp": 95,
+        "spo2": 96,
+        "glucose": 160
+      },
+      {
+        "time": "2026-01-01T11:50:00Z",
+        "hr": 86,
+        "sbp": 162,
+        "dbp": 92,
+        "spo2": 97,
+        "glucose": 155
+      }
+    ]
+  }
+}
+

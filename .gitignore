@@ -1,0 +1,12 @@
+node_modules
+.pnpm-store
+dist
+.next
+out
+.vercel
+.turbo
+.DS_Store
+*.log
+.env
+.env.*
+

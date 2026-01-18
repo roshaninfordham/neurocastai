@@ -125,7 +125,10 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
 
             <div>
               <Label htmlFor="facilityType">Facility Type</Label>
-              <Select value={facilityType} onValueChange={(v) => setFacilityType(v as FacilityType)}>
+              <Select
+                value={facilityType}
+                onValueChange={(value: FacilityType) => setFacilityType(value)}
+              >
                 <SelectTrigger id="facilityType">
                   <SelectValue />
                 </SelectTrigger>
@@ -149,7 +152,10 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
 
             <div>
               <Label htmlFor="arrivalMode">Arrival Mode</Label>
-              <Select value={arrivalMode} onValueChange={(v) => setArrivalMode(v as ArrivalMode)}>
+              <Select
+                value={arrivalMode}
+                onValueChange={(value: ArrivalMode) => setArrivalMode(value)}
+              >
                 <SelectTrigger id="arrivalMode">
                   <SelectValue />
                 </SelectTrigger>
@@ -259,7 +265,7 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
               <Checkbox 
                 id="meds" 
                 checked={medsListPresent} 
-                onCheckedChange={(checked) => setMedsListPresent(!!checked)} 
+                onCheckedChange={(checked: boolean | "indeterminate") => setMedsListPresent(!!checked)} 
               />
               <Label htmlFor="meds" className="font-normal cursor-pointer">Meds list present</Label>
             </div>
@@ -267,7 +273,7 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
               <Checkbox 
                 id="imaging" 
                 checked={imagingReportAvailable} 
-                onCheckedChange={(checked) => setImagingReportAvailable(!!checked)} 
+                onCheckedChange={(checked: boolean | "indeterminate") => setImagingReportAvailable(!!checked)} 
               />
               <Label htmlFor="imaging" className="font-normal cursor-pointer">Imaging report available</Label>
             </div>
@@ -285,7 +291,7 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
             <Checkbox 
               id="vitals" 
               checked={vitalsStreaming} 
-              onCheckedChange={(checked) => setVitalsStreaming(!!checked)} 
+              onCheckedChange={(checked: boolean | "indeterminate") => setVitalsStreaming(!!checked)} 
             />
             <Label htmlFor="vitals" className="font-normal cursor-pointer">Start vitals stream (demo simulator)</Label>
           </div>

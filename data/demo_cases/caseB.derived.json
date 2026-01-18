@@ -1,0 +1,284 @@
+{
+  "caseId": "NC-2026-002B",
+  "runId": "run-2026-002B-001",
+  "status": "DONE",
+  "outputs": {
+    "compression": {
+      "provider": "TOKENCO",
+      "originalTokenEstimate": 980,
+      "compressedTokenEstimate": 310,
+      "savingsPct": 68.4,
+      "compressedTextPreview": "54F with wake-up stroke pattern and incomplete medication history.",
+      "notes": "Synthetic wake-up stroke scenario; compression used for coordination only."
+    },
+    "riskFlags": [
+      {
+        "id": "R-WAKEUP-001",
+        "label": "Unknown onset time (wake-up stroke)",
+        "severity": "CRITICAL",
+        "confidence": "HIGH",
+        "category": "TIMELINE",
+        "evidence": {
+          "quote": "Unsure of exact onset time – normal when went to bed.",
+          "sourceAnchor": "Transfer Packet → History → Line 4",
+          "docType": "TRANSFER_PACKET"
+        },
+        "coordinationGuidance": "Escalate to comprehensive stroke center with advanced imaging to evaluate wake-up stroke eligibility.",
+        "includeInHandoffByDefault": true
+      },
+      {
+        "id": "R-MEDS-UNKNOWN-001",
+        "label": "Incomplete medication history",
+        "severity": "WARNING",
+        "confidence": "MEDIUM",
+        "category": "MEDS",
+        "evidence": {
+          "quote": "Medications: \"Some blood pressure pills\" – unable to specify.",
+          "sourceAnchor": "Transfer Packet → Medications → Line 6",
+          "docType": "TRANSFER_PACKET"
+        },
+        "coordinationGuidance": "Request family or pharmacy records to clarify medication list, including possible anticoagulants.",
+        "includeInHandoffByDefault": true
+      }
+    ],
+    "numeric": {
+      "provider": "WOOD_WIDE",
+      "derivedTimers": {
+        "timeSinceLKWMin": null,
+        "doorToCTMin": null,
+        "ctToDecisionMin": null,
+        "etaToCenterMin": 35
+      },
+      "stability": {
+        "status": "STABLE",
+        "reasons": []
+      },
+      "completeness": {
+        "scorePct": 64,
+        "missing": [
+          "Exact onset time confirmation",
+          "Complete medication list",
+          "CT/CTA imaging"
+        ]
+      },
+      "anomalies": [
+        {
+          "name": "Timeline uncertainty",
+          "value": "Last-known-well unknown",
+          "severity": "HIGH"
+        }
+      ]
+    },
+    "decision": {
+      "state": "ESCALATE",
+      "reason": "Wake-up stroke pattern with unknown onset time — needs advanced imaging.",
+      "triggeredRules": [
+        {
+          "id": "R-WAKEUP-001",
+          "name": "Wake-up stroke policy",
+          "explanation": "Unknown onset time requires advanced imaging and specialist evaluation."
+        }
+      ],
+      "nextSteps": [
+        "Escalate to stroke center with MRI capability.",
+        "Request family contact for detailed medication history.",
+        "Obtain CT/CTA urgently per local protocol.",
+        "Screen for wake-up stroke trials or protocols if applicable."
+      ],
+      "safetyNote": "Coordination only. No diagnosis."
+    },
+    "handoff": {
+      "header": {
+        "caseId": "NC-2026-002B",
+        "facilityType": "SPOKE_ED",
+        "arrivalMode": "WALK_IN",
+        "workflowState": "ESCALATE",
+        "completenessScorePct": 64
+      },
+      "timelineTable": [
+        {
+          "event": "Last known well (reported)",
+          "time": null,
+          "interval": "Unknown – wake-up stroke pattern"
+        },
+        {
+          "event": "ED arrival",
+          "time": "2026-01-02T08:45:00Z",
+          "interval": null
+        },
+        {
+          "event": "Coordination decision",
+          "time": "2026-01-02T09:00:00Z",
+          "interval": "15 min after ED arrival"
+        }
+      ],
+      "vitalsSummary": {
+        "hr": 76,
+        "bp": "148/88",
+        "spo2": "98%",
+        "glucose": null,
+        "stability": "Stable vitals at spoke ED."
+      },
+      "risks": [
+        {
+          "severity": "CRITICAL",
+          "label": "Unknown onset time (wake-up stroke)",
+          "evidenceQuote": "Unsure of exact onset time – normal when went to bed.",
+          "sourceAnchor": "Transfer Packet → History → Line 4",
+          "confidence": "HIGH"
+        },
+        {
+          "severity": "WARNING",
+          "label": "Incomplete medication history",
+          "evidenceQuote": "Medications: \"Some blood pressure pills\" – unable to specify.",
+          "sourceAnchor": "Transfer Packet → Medications → Line 6",
+          "confidence": "MEDIUM"
+        }
+      ],
+      "missingInfoChecklist": [
+        "Onset time confirmation via family or witnesses.",
+        "Complete medication list (including anticoagulants).",
+        "CT/CTA imaging and interpretation."
+      ],
+      "coordinationNextSteps": [
+        "Arrange transfer to comprehensive stroke center.",
+        "Share timeline uncertainty clearly with receiving team.",
+        "Coordinate imaging and labs en route if possible."
+      ],
+      "export": {
+        "text": "NC-2026-002B • ESCALATE • Wake-up stroke pattern with unknown onset time. Escalate to comprehensive stroke center with MRI capability."
+      }
+    },
+    "voice": {
+      "pushAlertsEnabled": true,
+      "lastAnnouncement": "Routing ESCALATE due to wake-up stroke with unknown onset time.",
+      "allowedQuestionTypes": [
+        "Why is this case escalated?",
+        "What information is missing?",
+        "What is the coordination checklist?"
+      ],
+      "blockedTopics": [
+        "Diagnosis",
+        "Treatment recommendations",
+        "Prognosis"
+      ]
+    }
+  },
+  "metrics": {
+    "totalLatencyMs": 2800,
+    "stageLatenciesMs": {
+      "INGEST": 250,
+      "EXTRACT": 900,
+      "NUMERIC": 450,
+      "ROUTE": 300
+    },
+    "tokenUsage": {
+      "inputTokens": 980,
+      "outputTokens": 360,
+      "compressionTokens": 310
+    },
+    "costUsdEstimate": 0.1,
+    "errorCount": 0
+  },
+  "events": [
+    {
+      "id": "case-b-evt-1",
+      "time": "2026-01-02T09:00:00Z",
+      "eventType": "STEP_STARTED",
+      "step": "INGEST",
+      "message": "Ingesting case NC-2026-002B with unknown onset time",
+      "payload": {
+        "lkwUnknown": true
+      }
+    },
+    {
+      "id": "case-b-evt-2",
+      "time": "2026-01-02T09:00:01Z",
+      "eventType": "STEP_DONE",
+      "step": "INGEST",
+      "message": "Core fields captured; marking onset time as unknown",
+      "payload": {
+        "fieldsValidated": 6
+      }
+    },
+    {
+      "id": "case-b-evt-3",
+      "time": "2026-01-02T09:00:02Z",
+      "eventType": "STEP_STARTED",
+      "step": "EXTRACT",
+      "message": "Context agent scanning history for wake-up stroke patterns",
+      "payload": {
+        "pattern": "wake-up-stroke"
+      }
+    },
+    {
+      "id": "case-b-evt-4",
+      "time": "2026-01-02T09:00:03Z",
+      "eventType": "STEP_PROGRESS",
+      "step": "EXTRACT",
+      "message": "Potential wake-up stroke language detected",
+      "payload": {
+        "candidateRiskId": "risk-b1"
+      }
+    },
+    {
+      "id": "case-b-evt-5",
+      "time": "2026-01-02T09:00:04Z",
+      "eventType": "STEP_DONE",
+      "step": "EXTRACT",
+      "message": "Risk flags raised for unknown onset and incomplete meds history",
+      "payload": {
+        "riskFlagsRaised": [
+          "risk-b1",
+          "risk-b2"
+        ]
+      }
+    },
+    {
+      "id": "case-b-evt-6",
+      "time": "2026-01-02T09:00:05Z",
+      "eventType": "STEP_STARTED",
+      "step": "NUMERIC",
+      "message": "Computing timers with unknown last-known-well handling",
+      "payload": {
+        "timers": [
+          "doorToCTMin"
+        ]
+      }
+    },
+    {
+      "id": "case-b-evt-7",
+      "time": "2026-01-02T09:00:06Z",
+      "eventType": "STEP_DONE",
+      "step": "NUMERIC",
+      "message": "Numeric metrics computed with partial data",
+      "payload": {
+        "completenessScorePct": 64
+      }
+    },
+    {
+      "id": "case-b-evt-8",
+      "time": "2026-01-02T09:00:07Z",
+      "eventType": "STEP_STARTED",
+      "step": "ROUTE",
+      "message": "Applying wake-up stroke routing rules",
+      "payload": {
+        "policyVersion": "v1.0.0"
+      }
+    },
+    {
+      "id": "case-b-evt-9",
+      "time": "2026-01-02T09:00:08Z",
+      "eventType": "STEP_DONE",
+      "step": "ROUTE",
+      "message": "Routing decision ESCALATE to center with MRI capability",
+      "payload": {
+        "state": "ESCALATE",
+        "contributingRiskIds": [
+          "risk-b1"
+        ]
+      }
+    }
+  ]
+}
+

@@ -1,5 +1,254 @@
 import { CaseData, RiskFlag, Vitals } from '../types/case';
 
+const PIPELINE_EVENTS_CASE_A = [
+  {
+    id: 'case-a-evt-1',
+    time: '2026-01-01T12:00:00Z',
+    eventType: 'STEP_STARTED',
+    step: 'INGEST',
+    message: 'Ingesting case NC-2026-001A from spoke ED',
+    payload: { sourceType: 'SIMULATED' }
+  },
+  {
+    id: 'case-a-evt-2',
+    time: '2026-01-01T12:00:01Z',
+    eventType: 'STEP_DONE',
+    step: 'INGEST',
+    message: 'Basic fields validated and queued for processing',
+    payload: { fieldsValidated: 8 }
+  },
+  {
+    id: 'case-a-evt-3',
+    time: '2026-01-01T12:00:02Z',
+    eventType: 'STEP_STARTED',
+    step: 'COMPRESS',
+    message: 'TokenCo compression started for transfer packet',
+    payload: { provider: 'TOKENCO' }
+  },
+  {
+    id: 'case-a-evt-4',
+    time: '2026-01-01T12:00:03Z',
+    eventType: 'STEP_DONE',
+    step: 'COMPRESS',
+    message: 'Compression completed with token savings',
+    payload: { originalTokens: 1247, compressedTokens: 342, savingsPct: 72.6 }
+  },
+  {
+    id: 'case-a-evt-5',
+    time: '2026-01-01T12:00:04Z',
+    eventType: 'STEP_STARTED',
+    step: 'EXTRACT',
+    message: 'Context agent scanning for anticoagulant and timeline risks',
+    payload: { rulesEvaluated: 7 }
+  },
+  {
+    id: 'case-a-evt-6',
+    time: '2026-01-01T12:00:05Z',
+    eventType: 'STEP_PROGRESS',
+    step: 'EXTRACT',
+    message: 'Potential DOAC mention detected — verifying evidence span',
+    payload: { candidateRiskId: 'risk-1' }
+  },
+  {
+    id: 'case-a-evt-7',
+    time: '2026-01-01T12:00:06Z',
+    eventType: 'STEP_DONE',
+    step: 'EXTRACT',
+    message: 'Risk flags extracted from packet',
+    payload: { riskFlagsRaised: ['risk-1', 'risk-2', 'risk-3'] }
+  },
+  {
+    id: 'case-a-evt-8',
+    time: '2026-01-01T12:00:07Z',
+    eventType: 'STEP_STARTED',
+    step: 'NUMERIC',
+    message: 'Computing numeric timers and completeness scores',
+    payload: { timers: ['timeSinceLKWMin', 'doorToCTMin'] }
+  },
+  {
+    id: 'case-a-evt-9',
+    time: '2026-01-01T12:00:08Z',
+    eventType: 'STEP_DONE',
+    step: 'NUMERIC',
+    message: 'Numeric metrics computed for case NC-2026-001A',
+    payload: { completenessScorePct: 82 }
+  },
+  {
+    id: 'case-a-evt-10',
+    time: '2026-01-01T12:00:09Z',
+    eventType: 'STEP_STARTED',
+    step: 'ROUTE',
+    message: 'Evaluating deterministic routing policy gates',
+    payload: { policyVersion: 'v1.0.0' }
+  },
+  {
+    id: 'case-a-evt-11',
+    time: '2026-01-01T12:00:10Z',
+    eventType: 'STEP_DONE',
+    step: 'ROUTE',
+    message: 'Routing decision HOLD due to DOAC risk flag',
+    payload: { state: 'HOLD', contributingRiskIds: ['risk-1'] }
+  }
+] as any;
+
+const PIPELINE_EVENTS_CASE_B = [
+  {
+    id: 'case-b-evt-1',
+    time: '2026-01-02T09:00:00Z',
+    eventType: 'STEP_STARTED',
+    step: 'INGEST',
+    message: 'Ingesting case NC-2026-002B with unknown onset time',
+    payload: { lkwUnknown: true }
+  },
+  {
+    id: 'case-b-evt-2',
+    time: '2026-01-02T09:00:01Z',
+    eventType: 'STEP_DONE',
+    step: 'INGEST',
+    message: 'Core fields captured; marking onset time as unknown',
+    payload: { fieldsValidated: 6 }
+  },
+  {
+    id: 'case-b-evt-3',
+    time: '2026-01-02T09:00:02Z',
+    eventType: 'STEP_STARTED',
+    step: 'EXTRACT',
+    message: 'Context agent scanning history for wake-up stroke patterns',
+    payload: { pattern: 'wake-up-stroke' }
+  },
+  {
+    id: 'case-b-evt-4',
+    time: '2026-01-02T09:00:03Z',
+    eventType: 'STEP_PROGRESS',
+    step: 'EXTRACT',
+    message: 'Potential wake-up stroke language detected',
+    payload: { candidateRiskId: 'risk-b1' }
+  },
+  {
+    id: 'case-b-evt-5',
+    time: '2026-01-02T09:00:04Z',
+    eventType: 'STEP_DONE',
+    step: 'EXTRACT',
+    message: 'Risk flags raised for unknown onset and incomplete meds history',
+    payload: { riskFlagsRaised: ['risk-b1', 'risk-b2'] }
+  },
+  {
+    id: 'case-b-evt-6',
+    time: '2026-01-02T09:00:05Z',
+    eventType: 'STEP_STARTED',
+    step: 'NUMERIC',
+    message: 'Computing timers with unknown last-known-well handling',
+    payload: { timers: ['doorToCTMin'] }
+  },
+  {
+    id: 'case-b-evt-7',
+    time: '2026-01-02T09:00:06Z',
+    eventType: 'STEP_DONE',
+    step: 'NUMERIC',
+    message: 'Numeric metrics computed with partial data',
+    payload: { completenessScorePct: 64 }
+  },
+  {
+    id: 'case-b-evt-8',
+    time: '2026-01-02T09:00:07Z',
+    eventType: 'STEP_STARTED',
+    step: 'ROUTE',
+    message: 'Applying wake-up stroke routing rules',
+    payload: { policyVersion: 'v1.0.0' }
+  },
+  {
+    id: 'case-b-evt-9',
+    time: '2026-01-02T09:00:08Z',
+    eventType: 'STEP_DONE',
+    step: 'ROUTE',
+    message: 'Routing decision ESCALATE to center with MRI capability',
+    payload: { state: 'ESCALATE', contributingRiskIds: ['risk-b1'] }
+  }
+] as any;
+
+const PIPELINE_EVENTS_CASE_C = [
+  {
+    id: 'case-c-evt-1',
+    time: '2026-01-03T11:30:00Z',
+    eventType: 'STEP_STARTED',
+    step: 'INGEST',
+    message: 'Ingesting case NC-2026-003C with clear onset and imaging',
+    payload: { imagingAvailable: true }
+  },
+  {
+    id: 'case-c-evt-2',
+    time: '2026-01-03T11:30:01Z',
+    eventType: 'STEP_DONE',
+    step: 'INGEST',
+    message: 'Core timing and facility fields validated',
+    payload: { fieldsValidated: 9 }
+  },
+  {
+    id: 'case-c-evt-3',
+    time: '2026-01-03T11:30:02Z',
+    eventType: 'STEP_STARTED',
+    step: 'COMPRESS',
+    message: 'TokenCo compression started for packet text',
+    payload: { provider: 'TOKENCO' }
+  },
+  {
+    id: 'case-c-evt-4',
+    time: '2026-01-03T11:30:03Z',
+    eventType: 'STEP_DONE',
+    step: 'COMPRESS',
+    message: 'Compression finished within budget',
+    payload: { originalTokens: 980, compressedTokens: 310, savingsPct: 68.4 }
+  },
+  {
+    id: 'case-c-evt-5',
+    time: '2026-01-03T11:30:04Z',
+    eventType: 'STEP_STARTED',
+    step: 'EXTRACT',
+    message: 'Context agent extracting LVO evidence and contraindications',
+    payload: { rulesEvaluated: 6 }
+  },
+  {
+    id: 'case-c-evt-6',
+    time: '2026-01-03T11:30:05Z',
+    eventType: 'STEP_DONE',
+    step: 'EXTRACT',
+    message: 'Risk flags updated with M1 occlusion and aspirin use',
+    payload: { riskFlagsRaised: ['risk-c1', 'risk-c2'] }
+  },
+  {
+    id: 'case-c-evt-7',
+    time: '2026-01-03T11:30:06Z',
+    eventType: 'STEP_STARTED',
+    step: 'NUMERIC',
+    message: 'Computing timers and completeness for clean LVO',
+    payload: { timers: ['timeSinceLKWMin', 'doorToCTMin', 'ctToDecisionMin'] }
+  },
+  {
+    id: 'case-c-evt-8',
+    time: '2026-01-03T11:30:07Z',
+    eventType: 'STEP_DONE',
+    step: 'NUMERIC',
+    message: 'Numeric metrics computed — all within expected windows',
+    payload: { completenessScorePct: 94 }
+  },
+  {
+    id: 'case-c-evt-9',
+    time: '2026-01-03T11:30:08Z',
+    eventType: 'STEP_STARTED',
+    step: 'ROUTE',
+    message: 'Evaluating final routing policy for thrombectomy transfer',
+    payload: { policyVersion: 'v1.0.0' }
+  },
+  {
+    id: 'case-c-evt-10',
+    time: '2026-01-03T11:30:09Z',
+    eventType: 'STEP_DONE',
+    step: 'ROUTE',
+    message: 'Routing decision PROCEED — activate receiving thrombectomy team',
+    payload: { state: 'PROCEED', contributingRiskIds: ['risk-c1'] }
+  }
+] as any;
+
 export const DEMO_CASES: Record<string, Partial<CaseData>> = {
   'case-a': {
     id: 'NC-2026-001A',
@@ -77,7 +326,8 @@ Imaging: CT head - no acute hemorrhage, CTA pending`,
       'CTA result confirmation needed',
       'Last Apixaban dose timing',
       'Coagulation panel if available'
-    ]
+    ],
+    pipelineEvents: PIPELINE_EVENTS_CASE_A
   },
   'case-b': {
     id: 'NC-2026-002B',
@@ -114,6 +364,7 @@ Physical: NIHSS 5, left arm weakness`,
         evidenceQuote: 'Unsure of exact onset time - was normal when went to bed',
         source: 'Transfer Packet',
         section: 'History',
+        confidence: 'high',
         whyMatters: 'Unknown onset time requires advanced imaging (MRI/perfusion) to determine treatment eligibility',
         recommendedAction: 'Escalate to comprehensive stroke center - wake-up protocol consideration',
         includeInHandoff: true
@@ -125,6 +376,7 @@ Physical: NIHSS 5, left arm weakness`,
         evidenceQuote: 'Medications: "Some blood pressure pills" - unable to specify',
         source: 'Transfer Packet',
         section: 'Medications',
+        confidence: 'medium',
         whyMatters: 'Unknown medications may include anticoagulants or other contraindications',
         recommendedAction: 'Request family contact or pharmacy records urgently',
         includeInHandoff: true
@@ -135,7 +387,8 @@ Physical: NIHSS 5, left arm weakness`,
       'Complete medication list',
       'CT/CTA imaging',
       'Contact information for family'
-    ]
+    ],
+    pipelineEvents: PIPELINE_EVENTS_CASE_B
   },
   'case-c': {
     id: 'NC-2026-003C',
@@ -176,6 +429,7 @@ Imaging: CT - no hemorrhage, no early signs. CTA - M1 occlusion confirmed.`,
         evidenceQuote: 'CTA - M1 occlusion confirmed',
         source: 'Transfer Packet',
         section: 'Imaging',
+        confidence: 'high',
         whyMatters: 'Large vessel occlusion is indication for mechanical thrombectomy - time critical',
         recommendedAction: 'Activate comprehensive stroke center immediately',
         includeInHandoff: true
@@ -187,12 +441,14 @@ Imaging: CT - no hemorrhage, no early signs. CTA - M1 occlusion confirmed.`,
         evidenceQuote: 'Medications: Amlodipine 5mg daily, Atorvastatin 40mg daily, Aspirin 81mg daily',
         source: 'Transfer Packet',
         section: 'Medications',
+        confidence: 'high',
         whyMatters: 'Aspirin noted for receiving team awareness - minimal bleeding risk at this dose',
         recommendedAction: 'Include in handoff - no delay indicated',
         includeInHandoff: true
       }
     ],
-    missingItems: []
+    missingItems: [],
+    pipelineEvents: PIPELINE_EVENTS_CASE_C
   }
 };
 

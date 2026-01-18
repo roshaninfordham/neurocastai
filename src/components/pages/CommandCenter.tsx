@@ -5,17 +5,19 @@ import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Progress } from '../ui/progress';
 import { 
-  Clock, 
-  Activity, 
-  AlertTriangle, 
-  CheckCircle2, 
-  PlayCircle, 
+  Clock,
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  PlayCircle,
   RefreshCw,
   TrendingUp,
   FileText,
   Zap,
-  ExternalLink
+  ExternalLink,
+  Info
 } from 'lucide-react';
+import type { PipelineEvent } from '@neurocast/shared';
 import { CaseData, Vitals, PipelineStatus, WorkflowState } from '../../types/case';
 import { calculateTimeDiff, formatTime, determineVitalStability } from '../../lib/caseUtils';
 
@@ -69,6 +71,22 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
     PROCEED: 'bg-green-600',
     HOLD: 'bg-yellow-600',
     ESCALATE: 'bg-red-600'
+  };
+
+  const eventIcon = (eventType: PipelineEvent['eventType']) => {
+    if (eventType === 'STEP_DONE') {
+      return <CheckCircle2 className="size-3 text-emerald-600" />;
+    }
+    if (eventType === 'STEP_STARTED' || eventType === 'STEP_PROGRESS') {
+      return <RefreshCw className="size-3 text-sky-600" />;
+    }
+    if (eventType === 'WARNING') {
+      return <AlertTriangle className="size-3 text-amber-600" />;
+    }
+    if (eventType === 'ERROR') {
+      return <AlertTriangle className="size-3 text-red-600" />;
+    }
+    return <Info className="size-3 text-slate-500" />;
   };
 
   return (
@@ -400,6 +418,54 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
                 </div>
               </CardContent>
             )}
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">Agentic Event Stream</CardTitle>
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                  {caseData.pipelineEvents?.length || 0} events
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {caseData.pipelineEvents && caseData.pipelineEvents.length > 0 ? (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {caseData.pipelineEvents.map((evt) => (
+                    <div
+                      key={evt.id}
+                      className="flex items-start gap-3 p-2 bg-slate-50 border border-slate-200 rounded-md"
+                    >
+                      <div className="mt-0.5">
+                        {eventIcon(evt.eventType)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                            {evt.step.replace('_', ' ')}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {new Date(evt.time).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-800 mt-0.5 truncate">
+                          {evt.message}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  Pipeline events will appear here as the agent runs.
+                </p>
+              )}
+            </CardContent>
           </Card>
         </div>
       </div>
