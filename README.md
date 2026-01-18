@@ -2,6 +2,8 @@
 
 Stroke care coordination control layer that turns messy transfer packets into auditable PROCEED, HOLD, or ESCALATE decisions.
 
+![Live Agent Orchestration](apps/web/public/assets/live_agent_orchestration.png)
+
 Figma prototype: https://www.figma.com/design/V30KaTGUs7whhC79vmVOPl/NeuroCast-AI-Prototype
 
 ---
