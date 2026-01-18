@@ -1,5 +1,22 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 const nextConfig = {
-  webpack: (config) => {
+  experimental: {
+    externalDir: true,
+  },
+  webpack: (config, { defaultLoaders }) => {
+    // Add support for importing from external src directory
+    const srcPath = path.resolve(__dirname, '../../src');
+
+    config.module.rules.push({
+      test: /\.(tsx|ts|js|jsx)$/,
+      include: [srcPath],
+      use: defaultLoaders.babel,
+    });
+
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...(config.resolve.alias || {}),

@@ -31,7 +31,7 @@ export function HandoffPacket({ caseData, onBack }: HandoffPacketProps) {
 
   const handleVerifyVtp = async () => {
     if (!caseData.vtp) return;
-    
+
     setVerifying(true);
     try {
       const response = await fetch('/api/vtp/verify', {
@@ -41,7 +41,7 @@ export function HandoffPacket({ caseData, onBack }: HandoffPacketProps) {
       });
       const result = await response.json();
       setVerificationResult(result);
-      
+
       if (result.verified) {
         toast.success('VTP verified successfully!');
       } else {
@@ -56,7 +56,7 @@ export function HandoffPacket({ caseData, onBack }: HandoffPacketProps) {
 
   const handleCommitHash = async () => {
     if (!caseData.vtp) return;
-    
+
     setCommitting(true);
     try {
       const response = await fetch('/api/vtp/commit', {
@@ -80,7 +80,7 @@ export function HandoffPacket({ caseData, onBack }: HandoffPacketProps) {
         riskScore: result.kairoRiskScore,
         findings: result.kairoFindingsSummary,
       });
-      
+
       if (result.kairoBlocked) {
         toast.error(`Commit blocked by Kairo: ${result.kairoReason}`);
       } else {
@@ -242,24 +242,22 @@ export function HandoffPacket({ caseData, onBack }: HandoffPacketProps) {
             )}
 
             {commitResult && (
-              <div className={`p-3 rounded-md border ${
-                commitResult.kairoBlocked 
-                  ? 'bg-red-50 border-red-200' 
+              <div className={`p-3 rounded-md border ${commitResult.kairoBlocked
+                  ? 'bg-red-50 border-red-200'
                   : (kairoDecision?.decision === 'WARN'
                     ? 'bg-yellow-50 border-yellow-200'
                     : 'bg-emerald-50 border-emerald-200')
-              }`}>
-                <p className={`text-sm font-medium mb-1 ${
-                  commitResult.kairoBlocked 
-                    ? 'text-red-700' 
+                }`}>
+                <p className={`text-sm font-medium mb-1 ${commitResult.kairoBlocked
+                    ? 'text-red-700'
                     : (kairoDecision?.decision === 'WARN'
                       ? 'text-yellow-700'
                       : 'text-emerald-700')
-                }`}>
+                  }`}>
                   {commitResult.kairoBlocked ? '⛔ Commit Blocked' : '✅ Commit Successful'}
                 </p>
                 <div className="text-xs text-slate-600 space-y-1">
-                  {commitResult.kairoBlocked && (
+                  {commitResult.kairoBlocked ? (
                     <>
                       <p><strong>Kairo Decision:</strong> {commitResult.kairoDecision}</p>
                       <p><strong>Reason:</strong> {commitResult.kairoReason}</p>
@@ -480,8 +478,8 @@ export function HandoffPacket({ caseData, onBack }: HandoffPacketProps) {
                   <span className="text-sm text-slate-600">Stability Assessment:</span>
                   <Badge className={
                     caseData.numericInsights?.stabilityFlag === 'Stable' ? 'bg-green-600' :
-                    caseData.numericInsights?.stabilityFlag === 'Borderline' ? 'bg-yellow-600' :
-                    'bg-red-600'
+                      caseData.numericInsights?.stabilityFlag === 'Borderline' ? 'bg-yellow-600' :
+                        'bg-red-600'
                   }>
                     {caseData.numericInsights?.stabilityFlag || 'Unknown'}
                   </Badge>
@@ -505,8 +503,8 @@ export function HandoffPacket({ caseData, onBack }: HandoffPacketProps) {
                   <div className="flex items-start gap-2 mb-2">
                     <Badge variant="outline" className={
                       flag.severity === 'critical' ? 'bg-red-100 text-red-800 border-red-200' :
-                      flag.severity === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                      'bg-blue-100 text-blue-800 border-blue-200'
+                        flag.severity === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                          'bg-blue-100 text-blue-800 border-blue-200'
                     }>
                       {flag.severity}
                     </Badge>
