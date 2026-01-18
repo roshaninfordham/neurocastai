@@ -363,12 +363,18 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
             <p className="text-blue-900 font-medium mb-1">Pipeline Preview:</p>
             <p className="text-xs text-blue-700">
-              Compression (TokenCo) → Extraction → Numeric (Wood Wide) → Gate → Packet
+              REDACT → Compression (TokenCo) → Extraction → Numeric (Wood Wide) → Gate → Packet
             </p>
           </div>
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm space-y-1">
             <p className="text-amber-900">
               <strong>Data Policy:</strong> Coordination tool only. No diagnosis. Synthetic demo data.
+            </p>
+            <p className="text-amber-900 text-xs">
+              Before any AI processing, NeuroCast redacts PHI (names, DOB, MRN, phone, address).
+            </p>
+            <p className="text-amber-900 text-xs">
+              Only redacted text is used for compression and extraction.
             </p>
           </div>
         </div>

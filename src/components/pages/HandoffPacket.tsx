@@ -84,7 +84,9 @@ export function HandoffPacket({ caseData, onBack }: HandoffPacketProps) {
               <p className="text-xl font-semibold">{caseData.id}</p>
               <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-200 rounded mt-2">
                 <span className="text-xs text-slate-600">Completeness:</span>
-                <span className="text-sm font-semibold text-blue-600">{caseData.completenessScore}%</span>
+                <span className="text-sm font-semibold text-blue-600">
+                  {caseData.handoffPacket?.header.completenessScorePct ?? caseData.completenessScore}%
+                </span>
               </div>
             </div>
           </div>
@@ -100,7 +102,10 @@ export function HandoffPacket({ caseData, onBack }: HandoffPacketProps) {
               <div>
                 <span className="text-slate-600">Facility:</span>
                 <span className="ml-2 font-medium">
-                  {caseData.facilityType === 'spoke' ? 'Non-specialized ED (spoke)' : 'Stroke center (hub)'}
+                  {caseData.handoffPacket?.header.facilityType ||
+                    (caseData.facilityType === 'spoke'
+                      ? 'Non-specialized ED (spoke)'
+                      : 'Stroke center (hub)')}
                 </span>
               </div>
               <div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Toaster, toast } from 'sonner';
 import { TopBar } from './components/TopBar';
 import { Sidebar, Page } from './components/Sidebar';
@@ -8,15 +8,505 @@ import { EvidenceAudit } from './components/pages/EvidenceAudit';
 import { HandoffPacket } from './components/pages/HandoffPacket';
 import { VoiceCommander } from './components/pages/VoiceCommander';
 import { Observability } from './components/pages/Observability';
-import { CaseData, VoiceAnnouncement, PipelineStatus } from './types/case';
+import { CaseData, VoiceAnnouncement, VitalStability } from './types/case';
 import { DEMO_CASES, generateMockVitals, MOCK_COMPRESSION_STATS } from './lib/mockData';
 import { calculateCompletenessScore, getMissingItems, calculateTimeDiff, determineVitalStability } from './lib/caseUtils';
+import type {
+  CaseInput,
+  CaseInputTelemetry,
+  CaseDerived,
+  CompressionResult,
+  NumericMetrics,
+  PacketSourceType,
+  TelemetryMode,
+  TimelineEvent,
+  PipelineEvent,
+  RiskFlag as SharedRiskFlag,
+} from '@neurocast/shared';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('start');
   const [activeCaseId, setActiveCaseId] = useState<string>('NC-2026-001A');
   const [cases, setCases] = useState<Record<string, CaseData>>({});
   const [announcements, setAnnouncements] = useState<VoiceAnnouncement[]>([]);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
+
+  const mapSharedRiskFlags = (flags: SharedRiskFlag[]): CaseData['riskFlags'] => {
+    return flags.map((flag) => ({
+      id: flag.id,
+      name: flag.label,
+      severity:
+        flag.severity === 'CRITICAL'
+          ? 'critical'
+          : flag.severity === 'WARNING'
+          ? 'warning'
+          : 'info',
+      evidenceQuote: flag.evidence.quote,
+      source: flag.evidence.sourceAnchor,
+      section: flag.evidence.docType,
+      lineNumber: undefined,
+      confidence:
+        flag.confidence === 'HIGH'
+          ? 'high'
+          : flag.confidence === 'MEDIUM'
+          ? 'medium'
+          : 'low',
+      whyMatters: flag.coordinationGuidance,
+      recommendedAction: flag.coordinationGuidance,
+      includeInHandoff: flag.includeInHandoffByDefault,
+    }));
+  };
+
+  const mapCompression = (compression: CompressionResult | undefined) => {
+    if (!compression) {
+      return undefined;
+    }
+    return {
+      originalLength: compression.originalTokenEstimate,
+      compressedLength: compression.compressedTokenEstimate,
+      savings: compression.savingsPct,
+      summary: compression.compressedTextPreview,
+    };
+  };
+
+  const mapNumeric = (numeric: NumericMetrics | undefined) => {
+    if (!numeric) {
+      return undefined;
+    }
+    const minutesToLabel = (value: number | undefined) => {
+      if (value === undefined) return 'Pending';
+      return `${value} min`;
+    };
+    const stabilityFlag: VitalStability =
+      numeric.stability.status === 'STABLE'
+        ? 'Stable'
+        : numeric.stability.status === 'BORDERLINE'
+        ? 'Borderline'
+        : 'Unstable';
+    return {
+      timeSinceLKW: minutesToLabel(numeric.derivedTimers.timeSinceLKWMin),
+      doorToCT: minutesToLabel(numeric.derivedTimers.doorToCTMin),
+      ctToDecision: minutesToLabel(numeric.derivedTimers.ctToDecisionMin),
+      etaToCenter: minutesToLabel(numeric.derivedTimers.etaToCenterMin),
+      stabilityFlag,
+      completeness: numeric.completeness.scorePct,
+    };
+  };
+
+  const buildHandoffPacketFromCase = (caseData: CaseData, derived: CaseDerived) => {
+    const header = {
+      caseId: caseData.id,
+      facilityType: caseData.facilityType === 'hub' ? 'Stroke center (hub)' : 'Non-specialized ED (spoke)',
+      arrivalMode: caseData.arrivalMode,
+      workflowState: caseData.workflowState,
+      completenessScorePct: caseData.completenessScore,
+    };
+
+    const timelineTable = [
+      {
+        event: 'Last Known Well',
+        time: caseData.lastKnownWell ? caseData.lastKnownWell.toISOString() : undefined,
+        interval: undefined,
+      },
+      {
+        event: 'ED Arrival',
+        time: caseData.edArrival.toISOString(),
+        interval: undefined,
+      },
+      {
+        event: 'CT Start',
+        time: caseData.ctStart ? caseData.ctStart.toISOString() : undefined,
+        interval: undefined,
+      },
+      {
+        event: 'Decision Time',
+        time: caseData.decisionTime ? caseData.decisionTime.toISOString() : undefined,
+        interval: undefined,
+      },
+    ];
+
+    const vitalsSummary = {
+      hr: caseData.currentVitals?.hr,
+      bp: caseData.currentVitals ? `${caseData.currentVitals.bpSys}/${caseData.currentVitals.bpDia}` : undefined,
+      spo2: caseData.currentVitals ? `${caseData.currentVitals.spO2}%` : undefined,
+      glucose: caseData.currentVitals ? `${caseData.currentVitals.glucose}` : undefined,
+      stability: caseData.numericInsights?.stabilityFlag || 'Unknown',
+    };
+
+    const risks =
+      derived.outputs.riskFlags?.map((flag) => ({
+        severity: flag.severity,
+        label: flag.label,
+        evidenceQuote: flag.evidence.quote,
+        sourceAnchor: flag.evidence.sourceAnchor,
+        confidence: flag.confidence,
+      })) || [];
+
+    const missingInfoChecklist = caseData.missingItems;
+
+    const coordinationNextSteps =
+      derived.outputs.decision?.nextSteps && derived.outputs.decision.nextSteps.length > 0
+        ? derived.outputs.decision.nextSteps
+        : caseData.nextSteps;
+
+    const exportObj = {
+      text: `NeuroCast AI coordination summary for case ${caseData.id}`,
+    };
+
+    return {
+      header,
+      timelineTable,
+      vitalsSummary,
+      risks,
+      missingInfoChecklist,
+      coordinationNextSteps,
+      export: exportObj,
+    };
+  };
+
+  const applyDerivedResultToCase = (derived: CaseDerived) => {
+    setCases((prev) => {
+      const existing = prev[derived.caseId];
+      if (!existing) {
+        return prev;
+      }
+
+      const compressionStats = mapCompression(derived.outputs.compression);
+      const numericInsights = mapNumeric(derived.outputs.numeric);
+      const riskFlags = derived.outputs.riskFlags
+        ? mapSharedRiskFlags(derived.outputs.riskFlags)
+        : existing.riskFlags;
+
+      const workflowState = derived.outputs.decision
+        ? derived.outputs.decision.state
+        : existing.workflowState;
+      const workflowReason = derived.outputs.decision
+        ? derived.outputs.decision.reason
+        : existing.workflowReason;
+      const triggeredRule =
+        derived.outputs.decision && derived.outputs.decision.triggeredRules.length > 0
+          ? derived.outputs.decision.triggeredRules[0].name
+          : existing.triggeredRule;
+      const nextSteps =
+        derived.outputs.decision && derived.outputs.decision.nextSteps.length > 0
+          ? derived.outputs.decision.nextSteps
+          : existing.nextSteps;
+
+      const completenessScore =
+        numericInsights && typeof numericInsights.completeness === 'number'
+          ? numericInsights.completeness
+          : existing.completenessScore;
+
+      const handoffPacket = buildHandoffPacketFromCase(
+        {
+          ...existing,
+          workflowState,
+          workflowReason,
+          triggeredRule,
+          nextSteps,
+          compressionStats: compressionStats || existing.compressionStats,
+          numericInsights: numericInsights || existing.numericInsights,
+          completenessScore,
+          riskFlags,
+        },
+        derived
+      );
+
+      return {
+        ...prev,
+        [derived.caseId]: {
+          ...existing,
+          runId: derived.runId,
+          workflowState,
+          workflowReason,
+          triggeredRule,
+          nextSteps,
+          compressionStats: compressionStats || existing.compressionStats,
+          numericInsights: numericInsights || existing.numericInsights,
+          completenessScore,
+          riskFlags,
+          metrics: derived.metrics,
+          handoffPacket,
+          pipelineStatus: {
+            compression: 'complete',
+            extraction: 'complete',
+            numeric: 'complete',
+            routing: 'complete',
+          },
+          pipelineEvents: derived.events,
+        },
+      };
+    });
+  };
+
+  const toCaseInput = (caseData: CaseData): CaseInput => {
+    const timeline: TimelineEvent[] = [];
+
+    if (caseData.lastKnownWell) {
+      timeline.push({
+        type: 'LAST_KNOWN_WELL',
+        time: caseData.lastKnownWell.toISOString(),
+        source: 'ED',
+        certainty: 'EXACT',
+      });
+    }
+
+    timeline.push({
+      type: 'ED_ARRIVAL',
+      time: caseData.edArrival.toISOString(),
+      source: 'ED',
+      certainty: 'EXACT',
+    });
+
+    if (caseData.ctStart) {
+      timeline.push({
+        type: 'CT_START',
+        time: caseData.ctStart.toISOString(),
+        source: 'ED',
+        certainty: 'EXACT',
+      });
+    }
+
+    if (caseData.ctaResult) {
+      timeline.push({
+        type: 'CTA_RESULT',
+        time: caseData.ctaResult.toISOString(),
+        source: 'SYSTEM',
+        certainty: 'EXACT',
+      });
+    }
+
+    if (caseData.decisionTime) {
+      timeline.push({
+        type: 'DECISION_TIME',
+        time: caseData.decisionTime.toISOString(),
+        source: 'ED',
+        certainty: 'EXACT',
+      });
+    }
+
+    if (caseData.transferRequest) {
+      timeline.push({
+        type: 'TRANSFER_ACTIVATED',
+        time: caseData.transferRequest.toISOString(),
+        source: 'SYSTEM',
+        certainty: 'EXACT',
+      });
+    }
+
+    const packetSourceType: PacketSourceType = caseData.uploadedDocument
+      ? 'PASTE_TEXT'
+      : 'SIMULATED';
+
+    const telemetryMode: TelemetryMode = caseData.vitalsStreaming
+      ? 'SIMULATED'
+      : 'MANUAL';
+
+    const telemetry: CaseInputTelemetry = {
+      mode: telemetryMode,
+      vitals: [],
+    };
+
+    return {
+      caseId: caseData.id,
+      createdAt: new Date().toISOString(),
+      facility: {
+        type: caseData.facilityType === 'hub' ? 'THROMBECTOMY_CENTER' : 'SPOKE_ED',
+        name: caseData.facilityType === 'hub' ? 'Stroke Center' : 'Spoke ED',
+      },
+      arrivalMode: caseData.arrivalMode === 'EMS' ? 'EMS' : 'WALK_IN',
+      patient: caseData.patientAge
+        ? {
+            age: caseData.patientAge,
+          }
+        : undefined,
+      timeline,
+      packet: {
+        sourceType: packetSourceType,
+        rawText: caseData.uploadedDocument || '',
+        hasMedsList: caseData.medsListPresent,
+        hasImagingReport: caseData.imagingReportAvailable,
+        declaredSynthetic: true,
+        consentAcknowledged: true,
+      },
+      telemetry,
+    };
+  };
+
+  const applyPipelineEventToCase = (event: PipelineEvent) => {
+    setCases((prevCases) => {
+      const payload = (event.payload || {}) as { caseId?: string; state?: string; reason?: string; triggeredRuleIds?: string[] };
+      const targetCaseId = payload.caseId || activeCaseId;
+
+      if (!targetCaseId) {
+        return prevCases;
+      }
+
+      const existing = prevCases[targetCaseId];
+      if (!existing) {
+        return prevCases;
+      }
+
+      const updatedPipelineEvents = [...(existing.pipelineEvents || []), event];
+
+      const updatedStatus = { ...existing.pipelineStatus };
+
+      if (event.step === 'COMPRESS') {
+        if (event.eventType === 'STEP_STARTED') {
+          updatedStatus.compression = 'running';
+        }
+        if (event.eventType === 'STEP_DONE') {
+          updatedStatus.compression = 'complete';
+        }
+      }
+
+      if (event.step === 'EXTRACT') {
+        if (event.eventType === 'STEP_STARTED') {
+          updatedStatus.extraction = 'running';
+        }
+        if (event.eventType === 'STEP_DONE') {
+          updatedStatus.extraction = 'complete';
+        }
+      }
+
+      if (event.step === 'NUMERIC') {
+        if (event.eventType === 'STEP_STARTED') {
+          updatedStatus.numeric = 'running';
+        }
+        if (event.eventType === 'STEP_DONE') {
+          updatedStatus.numeric = 'complete';
+        }
+      }
+
+      if (event.step === 'ROUTE') {
+        if (event.eventType === 'STEP_STARTED') {
+          updatedStatus.routing = 'running';
+        }
+        if (event.eventType === 'STEP_DONE') {
+          updatedStatus.routing = 'complete';
+        }
+      }
+
+      let workflowState = existing.workflowState;
+      let workflowReason = existing.workflowReason;
+      let triggeredRule = existing.triggeredRule;
+
+      if (event.step === 'ROUTE' && event.eventType === 'STEP_DONE') {
+        if (payload.state === 'HOLD' || payload.state === 'ESCALATE' || payload.state === 'PROCEED') {
+          workflowState = payload.state;
+        }
+        if (typeof payload.reason === 'string') {
+          workflowReason = payload.reason;
+        }
+        if (payload.triggeredRuleIds && payload.triggeredRuleIds.length > 0) {
+          triggeredRule = payload.triggeredRuleIds[0];
+        }
+      }
+
+      return {
+        ...prevCases,
+        [targetCaseId]: {
+          ...existing,
+          pipelineStatus: updatedStatus,
+          pipelineEvents: updatedPipelineEvents,
+          workflowState,
+          workflowReason,
+          triggeredRule,
+        },
+      };
+    });
+  };
+
+  const startEventStream = (runId: string) => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
+    const source = new EventSource(`/api/run/events?runId=${encodeURIComponent(runId)}`);
+
+    source.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data) as PipelineEvent;
+        applyPipelineEventToCase(data);
+      } catch {
+        // ignore malformed events
+      }
+    };
+
+    source.addEventListener('done', async () => {
+      try {
+        const response = await fetch(`/api/run/result?runId=${encodeURIComponent(runId)}`);
+        if (response.ok) {
+          const data = (await response.json()) as { status: string; result: CaseDerived | null };
+          if (data.result) {
+            applyDerivedResultToCase(data.result);
+          }
+        }
+        toast.success('Pipeline execution complete');
+      } catch {
+        toast.error('Pipeline completed but result could not be loaded');
+      } finally {
+        source.close();
+        eventSourceRef.current = null;
+        setActiveRunId(null);
+      }
+    });
+
+    source.onerror = () => {
+      source.close();
+      eventSourceRef.current = null;
+      toast.error('Lost connection to pipeline event stream');
+    };
+
+    eventSourceRef.current = source;
+  };
+
+  const startBackendPipelineForCase = async (caseData: CaseData) => {
+    try {
+      const caseInput = toCaseInput(caseData);
+      const response = await fetch('/api/run/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(caseInput),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to start pipeline run');
+      }
+
+      const data = (await response.json()) as { runId: string; caseId: string };
+
+      setCases((prev) => {
+        const existing = prev[caseData.id];
+        if (!existing) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [caseData.id]: {
+            ...existing,
+            runId: data.runId,
+          },
+        };
+      });
+
+      setActiveRunId(data.runId);
+      startEventStream(data.runId);
+    } catch {
+      toast.error('Unable to start pipeline backend run');
+    }
+  };
+
+  const handleReconnectStream = () => {
+    if (activeRunId) {
+      startEventStream(activeRunId);
+    } else {
+      toast.error('No active pipeline run to reconnect');
+    }
+  };
 
   // Initialize with a default case
   useEffect(() => {
@@ -118,7 +608,6 @@ export default function App() {
     const completenessScore = calculateCompletenessScore(partialCase);
     const missingItems = getMissingItems(partialCase);
 
-    // Simulate pipeline execution
     const newCase: CaseData = {
       id: partialCase.id || 'NC-2026-NEW',
       facilityType: partialCase.facilityType || 'spoke',
@@ -162,70 +651,39 @@ export default function App() {
         completeness: completenessScore
       },
       pipelineStatus: {
-        compression: partialCase.uploadedDocument ? 'complete' : 'pending',
-        extraction: partialCase.uploadedDocument ? 'complete' : 'pending',
-        numeric: 'complete',
-        routing: 'complete'
+        compression: 'pending',
+        extraction: 'pending',
+        numeric: 'pending',
+        routing: 'pending'
       },
       pipelineEvents: []
     };
 
-    // Run pipeline simulation
-    runPipeline(newCase);
-  };
+    setCases(prev => ({ ...prev, [newCase.id]: newCase }));
+    setActiveCaseId(newCase.id);
+    setCurrentPage('command');
 
-  const runPipeline = (caseData: CaseData) => {
-    setCases(prev => ({ ...prev, [caseData.id]: caseData }));
-    setActiveCaseId(caseData.id);
-    
-    // Simulate pipeline stages
-    let currentStatus = { ...caseData.pipelineStatus };
-    
-    // Stage 1: Compression
-    currentStatus.compression = 'running';
-    updateCaseStatus(caseData.id, currentStatus);
-    
-    setTimeout(() => {
-      currentStatus.compression = 'complete';
-      currentStatus.extraction = 'running';
-      updateCaseStatus(caseData.id, currentStatus);
-      
-      setTimeout(() => {
-        currentStatus.extraction = 'complete';
-        currentStatus.numeric = 'running';
-        updateCaseStatus(caseData.id, currentStatus);
-        
-        setTimeout(() => {
-          currentStatus.numeric = 'complete';
-          currentStatus.routing = 'running';
-          updateCaseStatus(caseData.id, currentStatus);
-          
-          setTimeout(() => {
-            currentStatus.routing = 'complete';
-            updateCaseStatus(caseData.id, currentStatus);
-            setCurrentPage('command');
-            toast.success('Pipeline execution complete');
-          }, 500);
-        }, 500);
-      }, 800);
-    }, 600);
-  };
-
-  const updateCaseStatus = (caseId: string, status: Record<string, PipelineStatus>) => {
-    setCases(prev => ({
-      ...prev,
-      [caseId]: {
-        ...prev[caseId],
-        pipelineStatus: status as any
-      }
-    }));
+    startBackendPipelineForCase(newCase);
   };
 
   const handleRerunPipeline = () => {
     const currentCase = cases[activeCaseId];
     if (currentCase) {
       toast.info('Re-running pipeline...');
-      runPipeline(currentCase);
+      setCases(prev => ({
+        ...prev,
+        [activeCaseId]: {
+          ...currentCase,
+          pipelineStatus: {
+            compression: 'pending',
+            extraction: 'pending',
+            numeric: 'pending',
+            routing: 'pending',
+          },
+          pipelineEvents: [],
+        },
+      }));
+      startBackendPipelineForCase(currentCase);
     }
   };
 
@@ -308,6 +766,7 @@ export default function App() {
               onOpenEvidence={() => setCurrentPage('evidence')}
               onRerunPipeline={handleRerunPipeline}
               onVoiceAnnounce={handleVoiceAnnounce}
+              onReconnect={handleReconnectStream}
             />
           )}
 

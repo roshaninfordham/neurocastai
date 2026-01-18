@@ -27,9 +27,10 @@ interface CommandCenterProps {
   onOpenEvidence: () => void;
   onRerunPipeline: () => void;
   onVoiceAnnounce: () => void;
+   onReconnect: () => void;
 }
 
-export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onRerunPipeline, onVoiceAnnounce }: CommandCenterProps) {
+export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onRerunPipeline, onVoiceAnnounce, onReconnect }: CommandCenterProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -97,8 +98,12 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
           <p className="text-slate-600">Live pipeline and decision monitoring</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={onRerunPipeline} className="gap-2">
+          <Button variant="outline" onClick={onReconnect} className="gap-2">
             <RefreshCw className="size-4" />
+            Reconnect Stream
+          </Button>
+          <Button variant="outline" onClick={onRerunPipeline} className="gap-2">
+            <PlayCircle className="size-4" />
             Re-run Pipeline
           </Button>
         </div>

@@ -18,8 +18,24 @@ const PIPELINE_EVENTS_CASE_A = [
     payload: { fieldsValidated: 8 }
   },
   {
-    id: 'case-a-evt-3',
+    id: 'case-a-evt-REDACT-1',
+    time: '2026-01-01T12:00:01Z',
+    eventType: 'STEP_STARTED',
+    step: 'REDACT',
+    message: 'Redacting PHI from packet text before compression.',
+    payload: { method: 'REGEX_DEMO' }
+  },
+  {
+    id: 'case-a-evt-REDACT-2',
     time: '2026-01-01T12:00:02Z',
+    eventType: 'STEP_DONE',
+    step: 'REDACT',
+    message: 'PHI removed: NAME, DOB, MRN (3 categories).',
+    payload: { removedFields: ['NAME', 'DOB', 'MRN'], method: 'REGEX_DEMO' }
+  },
+  {
+    id: 'case-a-evt-3',
+    time: '2026-01-01T12:00:03Z',
     eventType: 'STEP_STARTED',
     step: 'COMPRESS',
     message: 'TokenCo compression started for transfer packet',
@@ -27,7 +43,7 @@ const PIPELINE_EVENTS_CASE_A = [
   },
   {
     id: 'case-a-evt-4',
-    time: '2026-01-01T12:00:03Z',
+    time: '2026-01-01T12:00:04Z',
     eventType: 'STEP_DONE',
     step: 'COMPRESS',
     message: 'Compression completed with token savings',
@@ -35,7 +51,7 @@ const PIPELINE_EVENTS_CASE_A = [
   },
   {
     id: 'case-a-evt-5',
-    time: '2026-01-01T12:00:04Z',
+    time: '2026-01-01T12:00:05Z',
     eventType: 'STEP_STARTED',
     step: 'EXTRACT',
     message: 'Context agent scanning for anticoagulant and timeline risks',
@@ -43,7 +59,7 @@ const PIPELINE_EVENTS_CASE_A = [
   },
   {
     id: 'case-a-evt-6',
-    time: '2026-01-01T12:00:05Z',
+    time: '2026-01-01T12:00:06Z',
     eventType: 'STEP_PROGRESS',
     step: 'EXTRACT',
     message: 'Potential DOAC mention detected — verifying evidence span',
@@ -51,7 +67,7 @@ const PIPELINE_EVENTS_CASE_A = [
   },
   {
     id: 'case-a-evt-7',
-    time: '2026-01-01T12:00:06Z',
+    time: '2026-01-01T12:00:07Z',
     eventType: 'STEP_DONE',
     step: 'EXTRACT',
     message: 'Risk flags extracted from packet',
@@ -59,7 +75,7 @@ const PIPELINE_EVENTS_CASE_A = [
   },
   {
     id: 'case-a-evt-8',
-    time: '2026-01-01T12:00:07Z',
+    time: '2026-01-01T12:00:08Z',
     eventType: 'STEP_STARTED',
     step: 'NUMERIC',
     message: 'Computing numeric timers and completeness scores',
@@ -67,7 +83,7 @@ const PIPELINE_EVENTS_CASE_A = [
   },
   {
     id: 'case-a-evt-9',
-    time: '2026-01-01T12:00:08Z',
+    time: '2026-01-01T12:00:09Z',
     eventType: 'STEP_DONE',
     step: 'NUMERIC',
     message: 'Numeric metrics computed for case NC-2026-001A',
@@ -75,7 +91,7 @@ const PIPELINE_EVENTS_CASE_A = [
   },
   {
     id: 'case-a-evt-10',
-    time: '2026-01-01T12:00:09Z',
+    time: '2026-01-01T12:00:10Z',
     eventType: 'STEP_STARTED',
     step: 'ROUTE',
     message: 'Evaluating deterministic routing policy gates',
@@ -83,7 +99,7 @@ const PIPELINE_EVENTS_CASE_A = [
   },
   {
     id: 'case-a-evt-11',
-    time: '2026-01-01T12:00:10Z',
+    time: '2026-01-01T12:00:11Z',
     eventType: 'STEP_DONE',
     step: 'ROUTE',
     message: 'Routing decision HOLD due to DOAC risk flag',
@@ -109,8 +125,24 @@ const PIPELINE_EVENTS_CASE_B = [
     payload: { fieldsValidated: 6 }
   },
   {
-    id: 'case-b-evt-3',
+    id: 'case-b-evt-REDACT-1',
+    time: '2026-01-02T09:00:01Z',
+    eventType: 'STEP_STARTED',
+    step: 'REDACT',
+    message: 'Redacting PHI from packet text before risk extraction.',
+    payload: { method: 'REGEX_DEMO' }
+  },
+  {
+    id: 'case-b-evt-REDACT-2',
     time: '2026-01-02T09:00:02Z',
+    eventType: 'STEP_DONE',
+    step: 'REDACT',
+    message: 'PHI removed: NAME, ADDRESS (2 categories).',
+    payload: { removedFields: ['NAME', 'ADDRESS'], method: 'REGEX_DEMO' }
+  },
+  {
+    id: 'case-b-evt-3',
+    time: '2026-01-02T09:00:03Z',
     eventType: 'STEP_STARTED',
     step: 'EXTRACT',
     message: 'Context agent scanning history for wake-up stroke patterns',
@@ -118,7 +150,7 @@ const PIPELINE_EVENTS_CASE_B = [
   },
   {
     id: 'case-b-evt-4',
-    time: '2026-01-02T09:00:03Z',
+    time: '2026-01-02T09:00:04Z',
     eventType: 'STEP_PROGRESS',
     step: 'EXTRACT',
     message: 'Potential wake-up stroke language detected',
@@ -126,7 +158,7 @@ const PIPELINE_EVENTS_CASE_B = [
   },
   {
     id: 'case-b-evt-5',
-    time: '2026-01-02T09:00:04Z',
+    time: '2026-01-02T09:00:05Z',
     eventType: 'STEP_DONE',
     step: 'EXTRACT',
     message: 'Risk flags raised for unknown onset and incomplete meds history',
@@ -134,7 +166,7 @@ const PIPELINE_EVENTS_CASE_B = [
   },
   {
     id: 'case-b-evt-6',
-    time: '2026-01-02T09:00:05Z',
+    time: '2026-01-02T09:00:06Z',
     eventType: 'STEP_STARTED',
     step: 'NUMERIC',
     message: 'Computing timers with unknown last-known-well handling',
@@ -142,7 +174,7 @@ const PIPELINE_EVENTS_CASE_B = [
   },
   {
     id: 'case-b-evt-7',
-    time: '2026-01-02T09:00:06Z',
+    time: '2026-01-02T09:00:07Z',
     eventType: 'STEP_DONE',
     step: 'NUMERIC',
     message: 'Numeric metrics computed with partial data',
@@ -150,7 +182,7 @@ const PIPELINE_EVENTS_CASE_B = [
   },
   {
     id: 'case-b-evt-8',
-    time: '2026-01-02T09:00:07Z',
+    time: '2026-01-02T09:00:08Z',
     eventType: 'STEP_STARTED',
     step: 'ROUTE',
     message: 'Applying wake-up stroke routing rules',
@@ -158,7 +190,7 @@ const PIPELINE_EVENTS_CASE_B = [
   },
   {
     id: 'case-b-evt-9',
-    time: '2026-01-02T09:00:08Z',
+    time: '2026-01-02T09:00:09Z',
     eventType: 'STEP_DONE',
     step: 'ROUTE',
     message: 'Routing decision ESCALATE to center with MRI capability',
@@ -184,8 +216,24 @@ const PIPELINE_EVENTS_CASE_C = [
     payload: { fieldsValidated: 9 }
   },
   {
-    id: 'case-c-evt-3',
+    id: 'case-c-evt-REDACT-1',
+    time: '2026-01-03T11:30:01Z',
+    eventType: 'STEP_STARTED',
+    step: 'REDACT',
+    message: 'Redacting PHI from packet text with regex-based rules.',
+    payload: { method: 'REGEX_DEMO' }
+  },
+  {
+    id: 'case-c-evt-REDACT-2',
     time: '2026-01-03T11:30:02Z',
+    eventType: 'STEP_DONE',
+    step: 'REDACT',
+    message: 'PHI removed: NAME (1 category).',
+    payload: { removedFields: ['NAME'], method: 'REGEX_DEMO' }
+  },
+  {
+    id: 'case-c-evt-3',
+    time: '2026-01-03T11:30:03Z',
     eventType: 'STEP_STARTED',
     step: 'COMPRESS',
     message: 'TokenCo compression started for packet text',
@@ -193,7 +241,7 @@ const PIPELINE_EVENTS_CASE_C = [
   },
   {
     id: 'case-c-evt-4',
-    time: '2026-01-03T11:30:03Z',
+    time: '2026-01-03T11:30:04Z',
     eventType: 'STEP_DONE',
     step: 'COMPRESS',
     message: 'Compression finished within budget',
@@ -201,7 +249,7 @@ const PIPELINE_EVENTS_CASE_C = [
   },
   {
     id: 'case-c-evt-5',
-    time: '2026-01-03T11:30:04Z',
+    time: '2026-01-03T11:30:05Z',
     eventType: 'STEP_STARTED',
     step: 'EXTRACT',
     message: 'Context agent extracting LVO evidence and contraindications',
@@ -209,7 +257,7 @@ const PIPELINE_EVENTS_CASE_C = [
   },
   {
     id: 'case-c-evt-6',
-    time: '2026-01-03T11:30:05Z',
+    time: '2026-01-03T11:30:06Z',
     eventType: 'STEP_DONE',
     step: 'EXTRACT',
     message: 'Risk flags updated with M1 occlusion and aspirin use',
@@ -217,7 +265,7 @@ const PIPELINE_EVENTS_CASE_C = [
   },
   {
     id: 'case-c-evt-7',
-    time: '2026-01-03T11:30:06Z',
+    time: '2026-01-03T11:30:07Z',
     eventType: 'STEP_STARTED',
     step: 'NUMERIC',
     message: 'Computing timers and completeness for clean LVO',
@@ -225,7 +273,7 @@ const PIPELINE_EVENTS_CASE_C = [
   },
   {
     id: 'case-c-evt-8',
-    time: '2026-01-03T11:30:07Z',
+    time: '2026-01-03T11:30:08Z',
     eventType: 'STEP_DONE',
     step: 'NUMERIC',
     message: 'Numeric metrics computed — all within expected windows',
@@ -233,7 +281,7 @@ const PIPELINE_EVENTS_CASE_C = [
   },
   {
     id: 'case-c-evt-9',
-    time: '2026-01-03T11:30:08Z',
+    time: '2026-01-03T11:30:09Z',
     eventType: 'STEP_STARTED',
     step: 'ROUTE',
     message: 'Evaluating final routing policy for thrombectomy transfer',
@@ -241,7 +289,7 @@ const PIPELINE_EVENTS_CASE_C = [
   },
   {
     id: 'case-c-evt-10',
-    time: '2026-01-03T11:30:09Z',
+    time: '2026-01-03T11:30:10Z',
     eventType: 'STEP_DONE',
     step: 'ROUTE',
     message: 'Routing decision PROCEED — activate receiving thrombectomy team',

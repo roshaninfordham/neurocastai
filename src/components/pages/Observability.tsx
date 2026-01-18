@@ -63,15 +63,17 @@ const EVAL_CASES = [
   }
 ];
 
-const PIPELINE_STEPS = [
-  { step: 'Token Compression', status: 'complete', duration: '0.8s' },
-  { step: 'Risk Extraction', status: 'complete', duration: '1.2s' },
-  { step: 'Numeric Computation', status: 'complete', duration: '0.3s' },
-  { step: 'Routing Gate', status: 'complete', duration: '0.2s' },
-  { step: 'Handoff Generation', status: 'complete', duration: '0.5s' }
-];
-
 export function Observability({ caseData, onBack }: ObservabilityProps) {
+  const stageLatencies = caseData.metrics?.stageLatenciesMs;
+
+  const dynamicSteps = stageLatencies
+    ? Object.entries(stageLatencies).map(([step, latency]) => ({
+        step,
+        status: 'complete',
+        duration: latency !== undefined ? `${latency} ms` : 'N/A',
+      }))
+    : null;
+
   return (
     <div className="p-6">
       <div className="flex items-center gap-4 mb-6">
@@ -97,10 +99,19 @@ export function Observability({ caseData, onBack }: ObservabilityProps) {
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm font-medium text-blue-900 mb-2">Case: {caseData.id}</p>
                 <p className="text-xs text-blue-700">Deployed as MCP on LeanMCP • Traces via Phoenix</p>
+                <p className="text-xs text-blue-700 mt-1">
+                  Run ID: {caseData.runId || 'N/A'}
+                </p>
               </div>
 
               <div className="space-y-2">
-                {PIPELINE_STEPS.map((step, idx) => (
+                {(dynamicSteps || [
+                  { step: 'Token Compression', status: 'complete', duration: '0.8s' },
+                  { step: 'Risk Extraction', status: 'complete', duration: '1.2s' },
+                  { step: 'Numeric Computation', status: 'complete', duration: '0.3s' },
+                  { step: 'Routing Gate', status: 'complete', duration: '0.2s' },
+                  { step: 'Handoff Generation', status: 'complete', duration: '0.5s' },
+                ]).map((step, idx) => (
                   <div 
                     key={idx}
                     className="flex items-center justify-between p-3 bg-slate-50 border rounded-lg"

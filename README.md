@@ -52,7 +52,7 @@ The pipeline is designed as an auditable control layer.
 
 Stochastic LLM steps are upstream, while the final workflow state is produced by deterministic policy code.
 
-See `docs/ARCHITECTURE.md` and `docs/SAFETY.md` for details.
+See `docs/ARCHITECTURE.md` and `SAFETY.md` for details.
 
 ## Tech stack
 

@@ -1,4 +1,4 @@
-import type { PipelineEvent } from '@neurocast/shared';
+import type { PipelineEvent, PipelineMetrics, HandoffPacket } from '@neurocast/shared';
 
 export type WorkflowState = 'PROCEED' | 'HOLD' | 'ESCALATE';
 export type FacilityType = 'spoke' | 'hub';
@@ -39,6 +39,7 @@ export interface RiskFlag {
 
 export interface CaseData {
   id: string;
+  runId?: string;
   facilityType: FacilityType;
   patientAge?: number;
   arrivalMode: ArrivalMode;
@@ -84,6 +85,8 @@ export interface CaseData {
     routing: PipelineStatus;
   };
   pipelineEvents?: PipelineEvent[];
+  metrics?: PipelineMetrics;
+  handoffPacket?: HandoffPacket;
 }
 
 export interface VoiceAnnouncement {
