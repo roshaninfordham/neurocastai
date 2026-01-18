@@ -89,6 +89,25 @@ export interface CaseData {
   handoffPacket?: HandoffPacket;
   derived?: CaseDerived;
   vtp?: VerifiedTransferPacket | any; // Support both new and legacy VTP formats
+
+  // MCP Integration fields
+  runSource?: 'MCP' | 'LOCAL';
+  currentStep?: string;
+  intermediateOutputs?: {
+    redact?: { removedFields: string[]; phiRemoved: boolean };
+    compress?: { savingsPct: number; originalTokens: number; compressedTokens: number };
+    extract?: { flagCount: number; criticalCount: number };
+    numeric?: {
+      prob?: number;
+      cluster?: number;
+      clusterName?: string;
+      timers?: { doorToCT?: number; ctToDecision?: number; timeSinceLKW?: number };
+      completeness?: number;
+    };
+    route?: { state: string; ruleIds: string[]; reason: string };
+    packet?: { ready: boolean };
+    vtp?: { hash: string; verified: boolean; vtpId: string };
+  };
 }
 
 export interface VoiceAnnouncement {

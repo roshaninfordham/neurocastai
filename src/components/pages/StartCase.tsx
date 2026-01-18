@@ -17,19 +17,20 @@ import { calculateCompletenessScore } from '../../lib/caseUtils';
 interface StartCaseProps {
   onStartCase: (caseData: Partial<CaseData>) => void;
   onLoadDemo: (demoKey: string) => void;
+  onDemoRun?: () => void;
 }
 
-export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
+export function StartCase({ onStartCase, onLoadDemo, onDemoRun }: StartCaseProps) {
   const [caseId, setCaseId] = useState(`NC-2026-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`);
   const [facilityType, setFacilityType] = useState<FacilityType>('spoke');
   const [patientAge, setPatientAge] = useState<string>('');
   const [arrivalMode, setArrivalMode] = useState<ArrivalMode>('EMS');
-  
+
   const [lkwMode, setLkwMode] = useState<'exact' | 'estimate' | 'unknown'>('estimate');
   const [lkwTime, setLkwTime] = useState<string>('');
   const [lkwEstimate, setLkwEstimate] = useState([60]); // minutes ago
   const [lkwUnknown, setLkwUnknown] = useState(false);
-  
+
   const [uploadedText, setUploadedText] = useState('');
   const [medsListPresent, setMedsListPresent] = useState(false);
   const [imagingReportAvailable, setImagingReportAvailable] = useState(false);
@@ -45,7 +46,7 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
 
   const handleStartCase = () => {
     let lkw: Date | null = null;
-    
+
     if (lkwMode === 'exact' && lkwTime) {
       lkw = new Date(lkwTime);
     } else if (lkwMode === 'estimate') {
@@ -76,6 +77,28 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
         <p className="text-slate-600">Create a new stroke pathway coordination case in under 60 seconds</p>
       </div>
 
+      {/* Demo Run (Full Stack) - Prominent Button */}
+      {onDemoRun && (
+        <Card className="border-2 border-purple-500 bg-gradient-to-r from-purple-50 to-indigo-50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-purple-900">Demo Run (Full Stack)</h3>
+                <p className="text-sm text-purple-700">Load Case A → Start MCP Pipeline → Navigate to Command Center</p>
+              </div>
+              <Button
+                onClick={onDemoRun}
+                size="lg"
+                className="bg-purple-600 hover:bg-purple-700 gap-2"
+              >
+                <Play className="size-5" />
+                Start Demo
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Demo Cases Section */}
       <Card className="border-blue-200 bg-blue-50">
         <CardHeader>
@@ -83,22 +106,22 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
           <CardDescription>Load a pre-configured case to see NeuroCast in action</CardDescription>
         </CardHeader>
         <CardContent className="flex gap-3">
-          <Button 
-            onClick={() => onLoadDemo('case-a')} 
-            variant="outline" 
+          <Button
+            onClick={() => onLoadDemo('case-a')}
+            variant="outline"
             className="bg-white"
           >
             Case A: Anticoagulant Alert
           </Button>
-          <Button 
-            onClick={() => onLoadDemo('case-b')} 
+          <Button
+            onClick={() => onLoadDemo('case-b')}
             variant="outline"
             className="bg-white"
           >
             Case B: Wake-up Stroke
           </Button>
-          <Button 
-            onClick={() => onLoadDemo('case-c')} 
+          <Button
+            onClick={() => onLoadDemo('case-c')}
             variant="outline"
             className="bg-white"
           >
@@ -116,10 +139,10 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="caseId">Case ID</Label>
-              <Input 
-                id="caseId" 
-                value={caseId} 
-                onChange={(e) => setCaseId(e.target.value)} 
+              <Input
+                id="caseId"
+                value={caseId}
+                onChange={(e) => setCaseId(e.target.value)}
               />
             </div>
 
@@ -141,11 +164,11 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
 
             <div>
               <Label htmlFor="patientAge">Patient Age (optional)</Label>
-              <Input 
-                id="patientAge" 
-                type="number" 
-                value={patientAge} 
-                onChange={(e) => setPatientAge(e.target.value)} 
+              <Input
+                id="patientAge"
+                type="number"
+                value={patientAge}
+                onChange={(e) => setPatientAge(e.target.value)}
                 placeholder="e.g., 68"
               />
             </div>
@@ -179,27 +202,27 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
               <Label>LKW Input Mode</Label>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="mode-exact" 
-                    checked={lkwMode === 'exact'} 
-                    onCheckedChange={() => setLkwMode('exact')} 
+                  <Checkbox
+                    id="mode-exact"
+                    checked={lkwMode === 'exact'}
+                    onCheckedChange={() => setLkwMode('exact')}
                   />
                   <Label htmlFor="mode-exact" className="font-normal cursor-pointer">Exact time</Label>
                 </div>
                 {lkwMode === 'exact' && (
-                  <Input 
-                    type="datetime-local" 
-                    value={lkwTime} 
+                  <Input
+                    type="datetime-local"
+                    value={lkwTime}
                     onChange={(e) => setLkwTime(e.target.value)}
                     className="ml-6"
                   />
                 )}
 
                 <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="mode-estimate" 
-                    checked={lkwMode === 'estimate'} 
-                    onCheckedChange={() => setLkwMode('estimate')} 
+                  <Checkbox
+                    id="mode-estimate"
+                    checked={lkwMode === 'estimate'}
+                    onCheckedChange={() => setLkwMode('estimate')}
                   />
                   <Label htmlFor="mode-estimate" className="font-normal cursor-pointer">Estimated</Label>
                 </div>
@@ -208,8 +231,8 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-slate-600">~{lkwEstimate[0]} min ago</span>
                     </div>
-                    <Slider 
-                      value={lkwEstimate} 
+                    <Slider
+                      value={lkwEstimate}
                       onValueChange={setLkwEstimate}
                       min={15}
                       max={180}
@@ -219,10 +242,10 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
                 )}
 
                 <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="mode-unknown" 
-                    checked={lkwMode === 'unknown'} 
-                    onCheckedChange={() => setLkwMode('unknown')} 
+                  <Checkbox
+                    id="mode-unknown"
+                    checked={lkwMode === 'unknown'}
+                    onCheckedChange={() => setLkwMode('unknown')}
                   />
                   <Label htmlFor="mode-unknown" className="font-normal cursor-pointer">Unknown</Label>
                 </div>
@@ -247,7 +270,7 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="upload">Transfer Packet / EHR Text</Label>
-            <Textarea 
+            <Textarea
               id="upload"
               placeholder="Paste transfer packet, EHR summary, or patient history..."
               value={uploadedText}
@@ -262,18 +285,18 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
 
           <div className="flex gap-6">
             <div className="flex items-center gap-2">
-              <Checkbox 
-                id="meds" 
-                checked={medsListPresent} 
-                onCheckedChange={(checked: boolean | "indeterminate") => setMedsListPresent(!!checked)} 
+              <Checkbox
+                id="meds"
+                checked={medsListPresent}
+                onCheckedChange={(checked: boolean | "indeterminate") => setMedsListPresent(!!checked)}
               />
               <Label htmlFor="meds" className="font-normal cursor-pointer">Meds list present</Label>
             </div>
             <div className="flex items-center gap-2">
-              <Checkbox 
-                id="imaging" 
-                checked={imagingReportAvailable} 
-                onCheckedChange={(checked: boolean | "indeterminate") => setImagingReportAvailable(!!checked)} 
+              <Checkbox
+                id="imaging"
+                checked={imagingReportAvailable}
+                onCheckedChange={(checked: boolean | "indeterminate") => setImagingReportAvailable(!!checked)}
               />
               <Label htmlFor="imaging" className="font-normal cursor-pointer">Imaging report available</Label>
             </div>
@@ -288,10 +311,10 @@ export function StartCase({ onStartCase, onLoadDemo }: StartCaseProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-2">
-            <Checkbox 
-              id="vitals" 
-              checked={vitalsStreaming} 
-              onCheckedChange={(checked: boolean | "indeterminate") => setVitalsStreaming(!!checked)} 
+            <Checkbox
+              id="vitals"
+              checked={vitalsStreaming}
+              onCheckedChange={(checked: boolean | "indeterminate") => setVitalsStreaming(!!checked)}
             />
             <Label htmlFor="vitals" className="font-normal cursor-pointer">Start vitals stream (demo simulator)</Label>
           </div>

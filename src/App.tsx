@@ -24,6 +24,15 @@ import type {
   PipelineEvent,
   RiskFlag as SharedRiskFlag,
 } from '@neurocast/shared';
+import {
+  startPipelineRun,
+  openEventStream,
+  extractIntermediateOutputs,
+  getCurrentStep,
+  cleanupRun,
+  getPipelineMode,
+  type RunSource,
+} from './lib/pipelineUtils';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('start');
@@ -31,6 +40,7 @@ export default function App() {
   const [cases, setCases] = useState<Record<string, CaseData>>({});
   const [announcements, setAnnouncements] = useState<VoiceAnnouncement[]>([]);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
+  const [activeRunSource, setActiveRunSource] = useState<RunSource | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   const mapSharedRiskFlags = (flags: SharedRiskFlag[]): CaseData['riskFlags'] => {
@@ -41,8 +51,8 @@ export default function App() {
         flag.severity === 'CRITICAL'
           ? 'critical'
           : flag.severity === 'WARNING'
-          ? 'warning'
-          : 'info',
+            ? 'warning'
+            : 'info',
       evidenceQuote: flag.evidence.quote,
       source: flag.evidence.sourceAnchor,
       section: flag.evidence.docType,
@@ -51,8 +61,8 @@ export default function App() {
         flag.confidence === 'HIGH'
           ? 'high'
           : flag.confidence === 'MEDIUM'
-          ? 'medium'
-          : 'low',
+            ? 'medium'
+            : 'low',
       whyMatters: flag.coordinationGuidance,
       recommendedAction: flag.coordinationGuidance,
       includeInHandoff: flag.includeInHandoffByDefault,
@@ -83,13 +93,13 @@ export default function App() {
       numeric.stability.status === 'STABLE'
         ? 'Stable'
         : numeric.stability.status === 'BORDERLINE'
-        ? 'Borderline'
-        : 'Unstable';
+          ? 'Borderline'
+          : 'Unstable';
     return {
-      timeSinceLKW: minutesToLabel(numeric.derivedTimers.timeSinceLKWMin),
-      doorToCT: minutesToLabel(numeric.derivedTimers.doorToCTMin),
-      ctToDecision: minutesToLabel(numeric.derivedTimers.ctToDecisionMin),
-      etaToCenter: minutesToLabel(numeric.derivedTimers.etaToCenterMin),
+      timeSinceLKW: minutesToLabel(numeric.derivedTimers?.timeSinceLKWMin),
+      doorToCT: minutesToLabel(numeric.derivedTimers?.doorToCTMin),
+      ctToDecision: minutesToLabel(numeric.derivedTimers?.ctToDecisionMin),
+      etaToCenter: minutesToLabel(numeric.derivedTimers?.etaToCenterMin),
       stabilityFlag,
       completeness: numeric.completeness.scorePct,
     };
@@ -205,28 +215,28 @@ export default function App() {
 
       const handoffPacket = derived.outputs.handoff
         ? {
-            header: derived.outputs.handoff.header,
-            timelineTable: derived.outputs.handoff.timelineTable,
-            vitalsSummary: derived.outputs.handoff.vitalsSummary,
-            risks: derived.outputs.handoff.risks,
-            missingInfoChecklist: derived.outputs.handoff.missingInfoChecklist,
-            coordinationNextSteps: derived.outputs.handoff.coordinationNextSteps,
-            export: derived.outputs.handoff.export,
-          }
+          header: derived.outputs.handoff.header,
+          timelineTable: derived.outputs.handoff.timelineTable,
+          vitalsSummary: derived.outputs.handoff.vitalsSummary,
+          risks: derived.outputs.handoff.risks,
+          missingInfoChecklist: derived.outputs.handoff.missingInfoChecklist,
+          coordinationNextSteps: derived.outputs.handoff.coordinationNextSteps,
+          export: derived.outputs.handoff.export,
+        }
         : buildHandoffPacketFromCase(
-            {
-              ...existing,
-              workflowState,
-              workflowReason,
-              triggeredRule,
-              nextSteps,
-              compressionStats: compressionStats || existing.compressionStats,
-              numericInsights: numericInsights || existing.numericInsights,
-              completenessScore,
-              riskFlags,
-            },
-            derived
-          );
+          {
+            ...existing,
+            workflowState,
+            workflowReason,
+            triggeredRule,
+            nextSteps,
+            compressionStats: compressionStats || existing.compressionStats,
+            numericInsights: numericInsights || existing.numericInsights,
+            completenessScore,
+            riskFlags,
+          },
+          derived
+        );
 
       return {
         ...prev,
@@ -336,8 +346,8 @@ export default function App() {
       arrivalMode: caseData.arrivalMode === 'EMS' ? 'EMS' : 'WALK_IN',
       patient: caseData.patientAge
         ? {
-            age: caseData.patientAge,
-          }
+          age: caseData.patientAge,
+        }
         : undefined,
       timeline,
       packet: {
@@ -422,6 +432,12 @@ export default function App() {
         }
       }
 
+      // Extract intermediate outputs for live agent visibility
+      const intermediateOutputs = extractIntermediateOutputs(event, existing.intermediateOutputs);
+
+      // Track current step for agent orchestration display
+      const currentStep = getCurrentStep(event) || existing.currentStep;
+
       return {
         ...prevCases,
         [targetCaseId]: {
@@ -431,89 +447,79 @@ export default function App() {
           workflowState,
           workflowReason,
           triggeredRule,
+          intermediateOutputs,
+          currentStep,
         },
       };
     });
   };
 
-  const startEventStream = (runId: string) => {
+  const startEventStream = (runId: string, source: RunSource) => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
+      cleanupRun(activeRunId || '');
     }
 
-    const source = new EventSource(`/api/run/events?runId=${encodeURIComponent(runId)}`);
-
-    source.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data) as PipelineEvent;
-        applyPipelineEventToCase(data);
-      } catch {
-        // ignore malformed events
-      }
-    };
-
-    source.addEventListener('done', async () => {
-      try {
-        // Retry loop to handle 409 (still RUNNING)
-        let attempts = 0;
-        let resultLoaded = false;
-        while (attempts < 10 && !resultLoaded) {
-          const response = await fetch(`/api/run/result?runId=${encodeURIComponent(runId)}`);
-          if (response.status === 200) {
-            const data = (await response.json()) as { status: string; result: CaseDerived | null };
-            if (data.result) {
-              applyDerivedResultToCase(data.result);
-              resultLoaded = true;
+    const eventSource = openEventStream(runId, source, {
+      onEvent: (event) => {
+        applyPipelineEventToCase(event);
+      },
+      onDone: async (status) => {
+        try {
+          // Retry loop to handle 409 (still RUNNING)
+          let attempts = 0;
+          let resultLoaded = false;
+          while (attempts < 10 && !resultLoaded) {
+            const response = await fetch(`/api/run/result?runId=${encodeURIComponent(runId)}`);
+            if (response.status === 200) {
+              const data = (await response.json()) as { status: string; result: CaseDerived | null };
+              if (data.result) {
+                applyDerivedResultToCase(data.result);
+                resultLoaded = true;
+                break;
+              }
+            } else if (response.status === 409) {
+              await new Promise((res) => setTimeout(res, 300));
+              attempts += 1;
+              continue;
+            } else {
+              // 400/404/500
               break;
             }
-          } else if (response.status === 409) {
-            await new Promise((res) => setTimeout(res, 300));
-            attempts += 1;
-            continue;
-          } else {
-            // 400/404/500
-            break;
           }
+          if (resultLoaded) {
+            toast.success('Pipeline complete - Report generated');
+          } else {
+            toast.error('Pipeline completed but result not ready');
+          }
+        } catch {
+          toast.error('Pipeline completed but result could not be loaded');
+        } finally {
+          eventSourceRef.current = null;
+          setActiveRunId(null);
+          setActiveRunSource(null);
         }
-        if (resultLoaded) {
-          toast.success('Report generated');
-        } else {
-          toast.error('Pipeline completed but result not ready');
-        }
-      } catch {
-        toast.error('Pipeline completed but result could not be loaded');
-      } finally {
-        source.close();
+      },
+      onError: (error) => {
         eventSourceRef.current = null;
-        setActiveRunId(null);
-      }
+        toast.error(`Pipeline event stream error: ${error.message}`);
+      },
     });
 
-    source.onerror = () => {
-      source.close();
-      eventSourceRef.current = null;
-      toast.error('Lost connection to pipeline event stream');
-    };
-
-    eventSourceRef.current = source;
+    eventSourceRef.current = eventSource;
   };
 
   const startBackendPipelineForCase = async (caseData: CaseData) => {
     try {
       const caseInput = toCaseInput(caseData);
-      const response = await fetch('/api/run/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(caseInput),
+
+      // Use unified pipeline runner with MCP fallback
+      const result = await startPipelineRun(caseInput, () => {
+        toast.info('MCP offline → fallback to local pipeline', {
+          duration: 4000,
+          icon: '🔄',
+        });
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to start pipeline run');
-      }
-
-      const data = (await response.json()) as { runId: string; caseId: string };
 
       setCases((prev) => {
         const existing = prev[caseData.id];
@@ -524,21 +530,38 @@ export default function App() {
           ...prev,
           [caseData.id]: {
             ...existing,
-            runId: data.runId,
+            runId: result.runId,
+            runSource: result.source,
+            currentStep: 'INGEST',
+            intermediateOutputs: {},
+            pipelineStatus: {
+              compression: 'pending',
+              extraction: 'pending',
+              numeric: 'pending',
+              routing: 'pending',
+            },
           },
         };
       });
 
-      setActiveRunId(data.runId);
-      startEventStream(data.runId);
+      setActiveRunId(result.runId);
+      setActiveRunSource(result.source);
+
+      // Show run source badge
+      if (result.source === 'MCP') {
+        toast.success('Pipeline started via MCP', { icon: '🚀' });
+      }
+
+      startEventStream(result.runId, result.source);
     } catch {
-      toast.error('Unable to start pipeline backend run');
+      toast.error('Unable to start pipeline run');
     }
   };
 
   const handleReconnectStream = () => {
-    if (activeRunId) {
-      startEventStream(activeRunId);
+    if (activeRunId && activeRunSource) {
+      startEventStream(activeRunId, activeRunSource);
+      toast.info('Reconnected to event stream');
     } else {
       toast.error('No active pipeline run to reconnect');
     }
@@ -607,10 +630,10 @@ export default function App() {
       missingItems: demoData.missingItems || missingItems,
       compressionStats: MOCK_COMPRESSION_STATS,
       numericInsights: {
-        timeSinceLKW: demoData.lastKnownWell 
+        timeSinceLKW: demoData.lastKnownWell
           ? calculateTimeDiff(demoData.lastKnownWell, new Date())
           : 'Unknown',
-        doorToCT: demoData.ctStart 
+        doorToCT: demoData.ctStart
           ? calculateTimeDiff(demoData.edArrival!, demoData.ctStart)
           : 'Pending',
         ctToDecision: 'Complete',
@@ -630,9 +653,9 @@ export default function App() {
     setCases(prev => ({ ...prev, [newCase.id]: newCase }));
     setActiveCaseId(newCase.id);
     setCurrentPage('command');
-    
+
     toast.success(`Demo case ${demoKey.toUpperCase()} loaded`);
-    
+
     // Add announcement
     addAnnouncement(
       `Case ${newCase.id} loaded. Workflow state: ${newCase.workflowState}. ${newCase.workflowReason}`,
@@ -677,7 +700,7 @@ export default function App() {
       missingItems,
       compressionStats: partialCase.uploadedDocument ? MOCK_COMPRESSION_STATS : undefined,
       numericInsights: {
-        timeSinceLKW: partialCase.lastKnownWell 
+        timeSinceLKW: partialCase.lastKnownWell
           ? calculateTimeDiff(partialCase.lastKnownWell, new Date())
           : 'Unknown',
         doorToCT: 'Not started',
@@ -727,7 +750,7 @@ export default function App() {
     setCases(prev => {
       const caseData = prev[activeCaseId];
       if (!caseData) return prev;
-      
+
       const updatedFlags = caseData.riskFlags.map(flag =>
         flag.id === flagId
           ? { ...flag, includeInHandoff: !flag.includeInHandoff }
@@ -760,7 +783,7 @@ export default function App() {
       const message = `Alert: ${currentCase.workflowState}. ${currentCase.workflowReason}`;
       addAnnouncement(message, 'alert');
       toast.success('Voice announcement triggered');
-      
+
       // Use browser speech synthesis
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(message);
@@ -772,10 +795,27 @@ export default function App() {
   const currentCase = cases[activeCaseId];
   const availableCases = Object.keys(cases);
 
+  // Demo Run - load case A, start pipeline, switch to command center
+  const handleDemoRun = async () => {
+    toast.info('Starting Demo Run (Full Stack)...', { icon: '🚀' });
+
+    // Load demo case A
+    await loadDemoCase('case-a');
+
+    // Give time for case to load, then start pipeline
+    setTimeout(() => {
+      const caseData = cases[activeCaseId] || Object.values(cases)[0];
+      if (caseData) {
+        startBackendPipelineForCase(caseData);
+        setCurrentPage('command');
+      }
+    }, 100);
+  };
+
   return (
     <div className="h-screen flex flex-col bg-slate-50">
       <Toaster position="top-right" />
-      
+
       <TopBar
         currentCaseId={activeCaseId}
         availableCases={availableCases}
@@ -792,6 +832,7 @@ export default function App() {
             <StartCase
               onStartCase={handleStartCase}
               onLoadDemo={loadDemoCase}
+              onDemoRun={handleDemoRun}
             />
           )}
 
@@ -837,9 +878,7 @@ export default function App() {
             />
           )}
 
-          {currentPage === 'products' && (
-            <Products />
-          )}
+          {/* Products page removed - was placeholder */}
 
           {!currentCase && currentPage !== 'start' && currentPage !== 'products' && (
             <div className="h-full flex items-center justify-center">

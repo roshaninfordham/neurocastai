@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Progress } from '../ui/progress';
-import { 
+import {
   Clock,
   Activity,
   AlertTriangle,
@@ -20,6 +20,7 @@ import {
 import type { PipelineEvent } from '@neurocast/shared';
 import { CaseData, Vitals, PipelineStatus, WorkflowState } from '../../types/case';
 import { calculateTimeDiff, formatTime, determineVitalStability } from '../../lib/caseUtils';
+import { LiveAgentOrchestration } from '../LiveAgentOrchestration';
 
 interface CommandCenterProps {
   caseData: CaseData;
@@ -27,7 +28,7 @@ interface CommandCenterProps {
   onOpenEvidence: () => void;
   onRerunPipeline: () => void;
   onVoiceAnnounce: () => void;
-   onReconnect: () => void;
+  onReconnect: () => void;
 }
 
 export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onRerunPipeline, onVoiceAnnounce, onReconnect }: CommandCenterProps) {
@@ -40,11 +41,11 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
     return () => clearInterval(interval);
   }, []);
 
-  const timeSinceLKW = caseData.lastKnownWell 
+  const timeSinceLKW = caseData.lastKnownWell
     ? calculateTimeDiff(caseData.lastKnownWell, currentTime)
     : 'Unknown';
 
-  const doorToCT = caseData.ctStart 
+  const doorToCT = caseData.ctStart
     ? calculateTimeDiff(caseData.edArrival, caseData.ctStart)
     : 'Pending';
 
@@ -52,7 +53,7 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
     ? calculateTimeDiff(caseData.ctaResult, caseData.decisionTime)
     : 'Pending';
 
-  const stability = caseData.currentVitals 
+  const stability = caseData.currentVitals
     ? determineVitalStability(caseData.currentVitals)
     : 'Unknown';
 
@@ -109,6 +110,15 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
         </div>
       </div>
 
+      {/* Live Agent Orchestration Panel */}
+      <div className="mb-6">
+        <LiveAgentOrchestration
+          caseData={caseData}
+          onRerun={onRerunPipeline}
+          onReconnect={onReconnect}
+        />
+      </div>
+
       {/* TWEAK A: Decision Strip */}
       <Card className="mb-6 border-2 border-blue-500 bg-gradient-to-r from-blue-50 to-white">
         <CardContent className="p-6">
@@ -129,7 +139,7 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
                 <p className="text-sm font-medium text-slate-600 mb-1">Decision Reason:</p>
                 <p className="text-sm">{caseData.workflowReason}</p>
               </div>
-              
+
               {/* Wood Wide Numeric Confidence */}
               {caseData.derived?.outputs?.numeric?.prediction && (
                 <div className="border-l-2 border-purple-400 pl-3">
@@ -137,7 +147,7 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
                     Wood Wide Numeric Confidence:
                   </p>
                   <p className="text-sm">
-                    {Math.round(caseData.derived.outputs.numeric.prediction.needsEscalationProb * 100)}% escalation probability 
+                    {Math.round(caseData.derived.outputs.numeric.prediction.needsEscalationProb * 100)}% escalation probability
                     ({caseData.derived.outputs.numeric.prediction.confidence.toLowerCase()})
                     {caseData.derived.outputs.numeric.clustering && (
                       <span className="ml-2 text-slate-600">
@@ -147,7 +157,7 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
                   </p>
                 </div>
               )}
-              
+
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-2">Next Steps:</p>
                 <ul className="space-y-1">
@@ -159,7 +169,7 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
                   ))}
                 </ul>
               </div>
-              
+
               {/* Action Buttons */}
               <div className="flex gap-2 pt-2">
                 <Button onClick={onOpenEvidence} variant="outline" size="sm" className="gap-2">
@@ -191,27 +201,27 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <TimelineEvent 
+              <TimelineEvent
                 label="Last Known Well"
                 time={caseData.lastKnownWell}
                 status={caseData.lkwUnknown ? 'unknown' : 'set'}
               />
-              <TimelineEvent 
+              <TimelineEvent
                 label="ED Arrival"
                 time={caseData.edArrival}
                 status="set"
               />
-              <TimelineEvent 
+              <TimelineEvent
                 label="CT Started"
                 time={caseData.ctStart}
                 status={caseData.ctStart ? 'set' : 'pending'}
               />
-              <TimelineEvent 
+              <TimelineEvent
                 label="CTA Result"
                 time={caseData.ctaResult}
                 status={caseData.ctaResult ? 'set' : 'pending'}
               />
-              <TimelineEvent 
+              <TimelineEvent
                 label="Decision Time"
                 time={caseData.decisionTime}
                 status={caseData.decisionTime ? 'set' : 'pending'}
@@ -258,10 +268,10 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <VitalTile label="HR" value={caseData.currentVitals.hr} unit="bpm" />
-                    <VitalTile 
-                      label="BP" 
-                      value={`${caseData.currentVitals.bpSys}/${caseData.currentVitals.bpDia}`} 
-                      unit="mmHg" 
+                    <VitalTile
+                      label="BP"
+                      value={`${caseData.currentVitals.bpSys}/${caseData.currentVitals.bpDia}`}
+                      unit="mmHg"
                     />
                     <VitalTile label="SpO2" value={caseData.currentVitals.spO2} unit="%" />
                     <VitalTile label="Glucose" value={caseData.currentVitals.glucose} unit="mg/dL" />
@@ -270,11 +280,11 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
                   <div className="pt-3 border-t">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-slate-600">Stability:</span>
-                      <Badge 
+                      <Badge
                         className={
                           stability === 'Stable' ? 'bg-green-600' :
-                          stability === 'Borderline' ? 'bg-yellow-600' :
-                          'bg-red-600'
+                            stability === 'Borderline' ? 'bg-yellow-600' :
+                              'bg-red-600'
                         }
                       >
                         {stability}
@@ -344,11 +354,10 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
                 {caseData.riskFlags.slice(0, 3).map((flag) => (
                   <div key={flag.id} className="p-2 bg-white border rounded text-xs">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className={`size-3 shrink-0 mt-0.5 ${
-                        flag.severity === 'critical' ? 'text-red-600' :
+                      <AlertTriangle className={`size-3 shrink-0 mt-0.5 ${flag.severity === 'critical' ? 'text-red-600' :
                         flag.severity === 'warning' ? 'text-yellow-600' :
-                        'text-blue-600'
-                      }`} />
+                          'text-blue-600'
+                        }`} />
                       <div>
                         <p className="font-medium">{flag.name}</p>
                         <p className="text-slate-600 mt-1">"{flag.evidenceQuote.slice(0, 60)}..."</p>
@@ -405,13 +414,13 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
                     {caseData.workflowState}
                   </Badge>
                 </div>
-                
+
                 <div className="space-y-2 text-sm">
                   <div>
                     <p className="text-slate-600 font-medium">Reason:</p>
                     <p className="text-sm">{caseData.workflowReason}</p>
                   </div>
-                  
+
                   <div>
                     <p className="text-slate-600 font-medium">Triggered Rule:</p>
                     <p className="text-xs italic">{caseData.triggeredRule}</p>
@@ -501,11 +510,10 @@ function TimelineEvent({ label, time, status }: { label: string; time: Date | nu
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-slate-600">{label}:</span>
-      <span className={`font-medium ${
-        status === 'pending' ? 'text-slate-400' :
+      <span className={`font-medium ${status === 'pending' ? 'text-slate-400' :
         status === 'unknown' ? 'text-amber-600' :
-        'text-slate-900'
-      }`}>
+          'text-slate-900'
+        }`}>
         {status === 'unknown' ? 'Unknown' : formatTime(time)}
       </span>
     </div>
