@@ -9,7 +9,7 @@ import { Textarea } from '../ui/textarea';
 import { Slider } from '../ui/slider';
 import { Progress } from '../ui/progress';
 import { Badge } from '../ui/badge';
-import { Upload, Play, CheckCircle2, Circle } from 'lucide-react';
+import { Upload, Play, CheckCircle2, Circle, Camera } from 'lucide-react';
 import { CaseData, FacilityType, ArrivalMode } from '../../types/case';
 import { DEMO_CASES } from '../../lib/mockData';
 import { calculateCompletenessScore } from '../../lib/caseUtils';
@@ -126,6 +126,19 @@ export function StartCase({ onStartCase, onLoadDemo, onDemoRun }: StartCaseProps
             className="bg-white"
           >
             Case C: Clear LVO
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Home Check-In Link */}
+      <Card className="border-slate-300 bg-slate-50">
+        <CardContent className="p-4 flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-slate-700">Patient Home Check-In</h3>
+            <p className="text-sm text-slate-500">Test the mobile patient intake flow (Video Telemetry)</p>
+          </div>
+          <Button variant="outline" onClick={() => window.location.href = '/check-in-mobile'}>
+            <Camera className="mr-2 size-4" /> Go to Check-In
           </Button>
         </CardContent>
       </Card>
@@ -407,6 +420,6 @@ export function StartCase({ onStartCase, onLoadDemo, onDemoRun }: StartCaseProps
           Run NeuroCast Pipeline
         </Button>
       </div>
-    </div>
+    </div >
   );
 }

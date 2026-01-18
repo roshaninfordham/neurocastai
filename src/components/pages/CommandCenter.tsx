@@ -140,11 +140,11 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
                 <p className="text-sm">{caseData.workflowReason}</p>
               </div>
 
-              {/* Wood Wide Numeric Confidence */}
+              {/* NeuroCast Numeric Engine Numeric Confidence */}
               {caseData.derived?.outputs?.numeric?.prediction && (
                 <div className="border-l-2 border-purple-400 pl-3">
                   <p className="text-xs font-semibold text-purple-700">
-                    Wood Wide Numeric Confidence:
+                    NeuroCast Numeric Engine Numeric Confidence:
                   </p>
                   <p className="text-sm">
                     {Math.round(caseData.derived.outputs.numeric.prediction.needsEscalationProb * 100)}% escalation probability
@@ -314,7 +314,7 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-sm">Token Compression</CardTitle>
-                  <p className="text-xs text-slate-500 mt-0.5">powered by TokenCo</p>
+                  <p className="text-xs text-slate-500 mt-0.5">powered by NeuroCast Compression</p>
                 </div>
                 {statusIcon(caseData.pipelineStatus.compression)}
               </div>
@@ -378,7 +378,7 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-sm">Numeric Engine</CardTitle>
-                  <p className="text-xs text-slate-500 mt-0.5">powered by Wood Wide</p>
+                  <p className="text-xs text-slate-500 mt-0.5">powered by NeuroCast Numeric Engine</p>
                 </div>
                 {statusIcon(caseData.pipelineStatus.numeric)}
               </div>

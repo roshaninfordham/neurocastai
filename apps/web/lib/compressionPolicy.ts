@@ -65,7 +65,6 @@ export function chooseAggressiveness(context: AggressivenessContext): Aggressive
     const { redactedText, caseHasHighRiskMeds, caseHasUnknownOnset } = context;
 
     const charLen = redactedText.length;
-    const lineCount = redactedText.split('\n').length;
     const textLower = redactedText.toLowerCase();
 
     // Determine base aggressiveness by length

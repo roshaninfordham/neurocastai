@@ -41,6 +41,7 @@ For each incoming stroke transfer, NeuroCast:
 - Routes the case to PROCEED, HOLD, or ESCALATE via a policy gate
 - Generates a one-page handoff packet with VTP verification
 - Supports real-time voice Q&A about the case
+- **Home Check-In**: Enables patients to initiate verified transfer cases via video telemetry and AI triage
 - Logs traces and evals for observability
 
 ---
@@ -59,8 +60,8 @@ For each incoming stroke transfer, NeuroCast:
 ### Sponsor Integrations
 | Sponsor | Purpose | Status |
 |---------|---------|--------|
-| **TokenCo** | LLM compression intelligence | ✅ Live |
-| **Wood Wide AI** | Numeric decision workflow (ML prediction + clustering) | ✅ Live |
+| **NeuroCast Compression** | LLM compression intelligence | ✅ Live |
+| **NeuroCast Numeric Engine AI** | Numeric decision workflow (ML prediction + clustering) | ✅ Live |
 | **LeanMCP** | Model Context Protocol orchestration | ✅ Live |
 | **Phoenix** | Observability and tracing | ✅ Configured |
 | **Kairo** | Smart contract security for VTP | ⚡ Planned |
@@ -76,9 +77,9 @@ INGEST → REDACT → COMPRESS → EXTRACT → NUMERIC → ROUTE → PACKET → 
    │        │         │          │         │        │        │       └── Verified Transfer Packet (SHA-256 hash + signature)
    │        │         │          │         │        │        └── Handoff Packet Generation
    │        │         │          │         │        └── Deterministic policy gate (PROCEED/HOLD/ESCALATE)
-   │        │         │          │         └── Wood Wide AI (prediction + clustering)
+   │        │         │          │         └── NeuroCast Numeric Engine AI (prediction + clustering)
    │        │         │          └── Risk flag extraction with evidence
-   │        │         └── TokenCo compression (72.6% token savings)
+   │        │         └── NeuroCast Compression compression (72.6% token savings)
    │        └── PHI redaction (HIPAA-aligned)
    └── Case normalization
 ```
@@ -89,16 +90,16 @@ INGEST → REDACT → COMPRESS → EXTRACT → NUMERIC → ROUTE → PACKET → 
 |------|-------------|------------|---------|
 | **INGEST** | Normalize case input (packet, timeline, vitals) | TypeScript | ~50ms |
 | **REDACT** | Remove PHI (names, DOBs, MRNs) before compression | Regex patterns | 3+ fields removed |
-| **COMPRESS** | TokenCo reduces packet size for downstream LLM steps | TokenCo API | 72.6% savings |
+| **COMPRESS** | NeuroCast Compression reduces packet size for downstream LLM steps | NeuroCast Compression API | 72.6% savings |
 | **EXTRACT** | Extract coordination risk flags with evidence quotes | Pattern matching | 1-5 flags per case |
-| **NUMERIC** | Compute timers, completeness, prediction, clustering | Wood Wide AI | 65%+ escalation prob |
+| **NUMERIC** | Compute timers, completeness, prediction, clustering | NeuroCast Numeric Engine AI | 65%+ escalation prob |
 | **ROUTE** | Deterministic policy gate using rules + ML insights | Policy engine | PROCEED/HOLD/ESCALATE |
 | **PACKET** | Generate one-page handoff packet | React template | 100% completeness |
 | **VTP** | Verified Transfer Packet with cryptographic hash | SHA-256 | Tamper-proof |
 
 ---
 
-## 🗜️ TokenCo Compression Intelligence
+## 🗜️ NeuroCast Compression Compression Intelligence
 
 ### Integration Details
 
@@ -123,7 +124,7 @@ INGEST → REDACT → COMPRESS → EXTRACT → NUMERIC → ROUTE → PACKET → 
 
 ### Compression Policy Engine
 
-Our domain-aware algorithm on top of TokenCo:
+Our domain-aware algorithm on top of NeuroCast Compression:
 
 1. **Dynamic Aggressiveness Selection**
    - Short text (<1200 chars): 0.45 (light)
@@ -151,7 +152,7 @@ apps/web/lib/
 
 ---
 
-## 🌲 Wood Wide AI Numeric Integration
+## 🌲 NeuroCast Numeric Engine AI Numeric Integration
 
 ### Endpoints
 
@@ -251,12 +252,12 @@ NEXT_PUBLIC_PIPELINE_MODE=mcp
 NEXT_PUBLIC_MCP_BASE_URL=http://localhost:3001
 NEXT_PUBLIC_MCP_SSE_BASE_URL=http://localhost:3001
 
-# TokenCo Compression (server-side only)
+# NeuroCast Compression Compression (server-side only)
 TOKENCO_API_KEY=ttc_sk_xxxxx
 TOKENCO_MODEL=bear-1
 TOKENCO_DEFAULT_AGGRESSIVENESS=0.6
 
-# Wood Wide AI
+# NeuroCast Numeric Engine AI
 WOODWIDE_API_KEY=xxx
 WOODWIDE_BASE_URL=https://api.woodwide.ai
 
@@ -301,7 +302,7 @@ npm run build
 1. **Start Case** → Load synthetic stroke case (Case A: Anticoagulant Alert)
 2. **Run Pipeline** → Watch INGEST → REDACT → COMPRESS → EXTRACT → NUMERIC → ROUTE → PACKET
 3. **Command Center** → See Live Agent Orchestration with real-time metrics
-4. **Compression Stats** → TokenCo showing 72.6% savings, 1247→342 tokens
+4. **Compression Stats** → NeuroCast Compression showing 72.6% savings, 1247→342 tokens
 5. **Risk Flags** → "Critical anticoagulant present (Apixaban)"
 6. **Workflow State** → HOLD decision with next steps
 7. **Handoff Packet** → One-page summary with VTP hash
@@ -351,7 +352,7 @@ neurocastai/
 |----------|--------|
 | **Compression** | 1247 → 342 tokens (72.6% saved) |
 | **Risk Flags** | 1 CRITICAL (anticoagulant), 1 WARNING (timeline) |
-| **Escalation Prob** | 72% (Wood Wide prediction) |
+| **Escalation Prob** | 72% (NeuroCast Numeric Engine prediction) |
 | **Cluster** | Segment 3 (high-risk) |
 | **Workflow State** | HOLD |
 | **Completeness** | 85% |
@@ -388,7 +389,7 @@ neurocastai/
 See [SAFETY.md](SAFETY.md) for full details:
 
 - **PHI Redaction**: All identifiers removed before compression
-- **TokenCo Never Sees PHI**: Only redacted text is sent to API
+- **NeuroCast Compression Never Sees PHI**: Only redacted text is sent to API
 - **Coordination Only**: No diagnosis, no treatment recommendations
 - **Synthetic Data**: All demo cases are artificial
 - **Audit Trail**: Full event logging with timestamps
@@ -398,8 +399,8 @@ See [SAFETY.md](SAFETY.md) for full details:
 ## 🙏 Credits
 
 - NeuroCast AI team
-- **TokenCo** - Compression intelligence
-- **Wood Wide AI** - Numeric decision engine
+- **NeuroCast Compression** - Compression intelligence
+- **NeuroCast Numeric Engine AI** - Numeric decision engine
 - **LeanMCP** - Model Context Protocol orchestration
 - **Phoenix** - Observability
 - Figma prototype and design: NeuroCast AI Prototype

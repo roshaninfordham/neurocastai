@@ -1,12 +1,13 @@
 import { cn } from './ui/utils';
-import { 
-  PlayCircle, 
-  LayoutDashboard, 
-  FileSearch, 
-  FileText, 
-  Mic, 
+import {
+  PlayCircle,
+  LayoutDashboard,
+  FileSearch,
+  FileText,
+  Mic,
   BarChart3,
-  Package
+  Package,
+  Camera
 } from 'lucide-react';
 
 export type Page = 'start' | 'command' | 'evidence' | 'handoff' | 'voice' | 'observability' | 'products';
@@ -16,8 +17,9 @@ interface SidebarProps {
   onPageChange: (page: Page) => void;
 }
 
-const navItems: { id: Page; label: string; icon: any }[] = [
+const navItems: { id: Page | 'home-checkin'; label: string; icon: any; href?: string }[] = [
   { id: 'start', label: 'Start Case', icon: PlayCircle },
+  { id: 'home-checkin', label: 'Home Check-In', icon: Camera, href: '/home-checkin' },
   { id: 'command', label: 'Command Center', icon: LayoutDashboard },
   { id: 'evidence', label: 'Evidence & Audit', icon: FileSearch },
   { id: 'handoff', label: 'Handoff Packet', icon: FileText },
@@ -33,15 +35,30 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPage === item.id;
-          
+
+          if (item.href) {
+            return (
+              <a
+                key={item.id}
+                href={item.href}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors text-slate-300 hover:bg-slate-800 hover:text-white'
+                )}
+              >
+                <Icon className="size-5 shrink-0" />
+                <span className="text-sm font-medium">{item.label}</span>
+              </a>
+            );
+          }
+
           return (
             <button
               key={item.id}
-              onClick={() => onPageChange(item.id)}
+              onClick={() => onPageChange(item.id as Page)}
               className={cn(
                 'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors',
-                isActive 
-                  ? 'bg-blue-600 text-white' 
+                isActive
+                  ? 'bg-blue-600 text-white'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
               )}
             >

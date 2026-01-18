@@ -73,10 +73,10 @@ export function Observability({ caseData, onBack }: ObservabilityProps) {
 
   const dynamicSteps = stageLatencies
     ? Object.entries(stageLatencies).map(([step, latency]) => ({
-        step,
-        status: 'complete',
-        duration: latency !== undefined ? `${latency} ms` : 'N/A',
-      }))
+      step,
+      status: 'complete',
+      duration: latency !== undefined ? `${latency} ms` : 'N/A',
+    }))
     : null;
 
   return (
@@ -167,19 +167,19 @@ export function Observability({ caseData, onBack }: ObservabilityProps) {
             </CardContent>
           </Card>
 
-          {/* Wood Wide Numeric Decision Card */}
+          {/* NeuroCast Numeric Engine Numeric Decision Card */}
           {caseData.derived?.outputs?.numeric && (
             <Card className="bg-purple-50 border-purple-200">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <span className="text-purple-700">Wood Wide Numeric Engine</span>
+                  <span className="text-purple-700">NeuroCast Numeric Engine Numeric Engine</span>
                 </CardTitle>
                 <CardDescription>AI-powered decision workflow analysis</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="flex justify-between p-2 bg-white rounded">
                   <span className="text-slate-600">Provider:</span>
-                  <span className="font-semibold">{caseData.derived.outputs.numeric.provider || 'Wood Wide'}</span>
+                  <span className="font-semibold">{caseData.derived.outputs.numeric.provider || 'NeuroCast Numeric Engine'}</span>
                 </div>
                 {caseData.derived.outputs.numeric.prediction && (
                   <>
@@ -193,7 +193,7 @@ export function Observability({ caseData, onBack }: ObservabilityProps) {
                       <span className="text-slate-600">Confidence:</span>
                       <Badge variant={
                         caseData.derived.outputs.numeric.prediction.confidence === 'HIGH' ? 'default' :
-                        caseData.derived.outputs.numeric.prediction.confidence === 'MEDIUM' ? 'secondary' : 'outline'
+                          caseData.derived.outputs.numeric.prediction.confidence === 'MEDIUM' ? 'secondary' : 'outline'
                       }>
                         {caseData.derived.outputs.numeric.prediction.confidence}
                       </Badge>
@@ -413,7 +413,11 @@ export function Observability({ caseData, onBack }: ObservabilityProps) {
               <span className="text-xs">{kairo?.analyzedAt ? new Date(kairo.analyzedAt).toLocaleString() : 'Not analyzed'}</span>
             </div>
             <div className="p-3 bg-slate-50 rounded text-xs text-slate-700">
-              {kairo?.summary ?? 'Run scripts/kairoCheck.ts to populate this from the Kairo API.'}
+              {typeof kairo?.summary === 'string'
+                ? kairo.summary
+                : kairo?.summary
+                  ? `Critical: ${kairo.summary.critical}, High: ${kairo.summary.high}, Total: ${kairo.summary.total}`
+                  : 'Run scripts/kairoCheck.ts to populate this from the Kairo API.'}
             </div>
           </CardContent>
         </Card>

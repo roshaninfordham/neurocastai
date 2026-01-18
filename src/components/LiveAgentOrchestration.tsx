@@ -24,7 +24,7 @@ const PIPELINE_STEPS = ['INGEST', 'REDACT', 'COMPRESS', 'EXTRACT', 'NUMERIC', 'R
 const STEP_DESCRIPTIONS: Record<string, string> = {
     INGEST: 'Ingesting case data and normalizing inputs...',
     REDACT: 'Removing PHI and sensitive data...',
-    COMPRESS: 'Compressing text with TokenCo (saving tokens)...',
+    COMPRESS: 'Compressing text with NeuroCast Compression (saving tokens)...',
     EXTRACT: 'Extracting coordination risk flags with evidence...',
     NUMERIC: 'Computing Wood Wide metrics (prediction + clustering)...',
     ROUTE: 'Applying deterministic routing policy...',
@@ -160,11 +160,11 @@ export function LiveAgentOrchestration({ caseData, onRerun, onReconnect }: LiveA
                             </p>
                         </div>
 
-                        {/* COMPRESS (TokenCo) - Enhanced metrics */}
+                        {/* COMPRESS (NeuroCast Compression) - Enhanced metrics */}
                         <div className="bg-gradient-to-r from-purple-50 to-slate-50 rounded p-2 col-span-2 border border-purple-200">
                             <div className="flex items-center justify-between mb-1">
                                 <p className="text-purple-700 font-medium">COMPRESS</p>
-                                <span className="text-[10px] text-purple-500">powered by TokenCo</span>
+                                <span className="text-[10px] text-purple-500">powered by NeuroCast Compression</span>
                             </div>
                             {intermediateOutputs.compress ? (
                                 <div className="space-y-1">

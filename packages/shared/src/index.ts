@@ -380,7 +380,11 @@ export type PipelineStep =
   | "ROUTE"
   | "PACKET"
   | "KAIRO_ANALYZE"
-  | "VOICE_SUMMARY";
+  | "VOICE_SUMMARY"
+  | "HOME_CHECKIN"
+  | "VIDEO_DETECT"
+  | "TRIAGE"
+  | "NOTIFY";
 
 export type PipelineEventType =
   | "STEP_STARTED"
@@ -421,6 +425,36 @@ export type CaseDerivedOutputs = {
   voice?: VoiceSummary;
   vtp?: VerifiedTransferPacket;
   kairo?: KairoDecision;
+  homeCheckin?: HomeCheckinResult;
+};
+
+export type OvershootNormalizedResult = {
+  ts: string;
+  raw: string;
+  parsed?: {
+    signal_type?: string;
+    severity?: string;
+    confidence?: number;
+    notes?: string;
+  };
+  inferenceLatencyMs?: number;
+  totalLatencyMs?: number;
+  source: "camera" | "video";
+};
+
+export type TriageDecision = {
+  urgency: "low" | "medium" | "high" | "critical";
+  what_happened: string;
+  why_it_matters: string;
+  what_next: Array<{ action: string; reason: string }>;
+  confidence: number;
+  supporting_signals: string[];
+  disclaimer: string;
+};
+
+export type HomeCheckinResult = {
+  observations: OvershootNormalizedResult[];
+  triage?: TriageDecision;
 };
 
 export type CaseDerived = {
