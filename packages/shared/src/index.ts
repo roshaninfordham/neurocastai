@@ -90,7 +90,7 @@ export type NormalizedCase = {
 };
 
 export type CompressionResult = {
-  provider: "TOKENCO";
+  provider: "TOKENCO" | "FALLBACK";
   originalTokenEstimate: number;
   compressedTokenEstimate: number;
   savingsPct: number;

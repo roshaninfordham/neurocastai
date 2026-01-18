@@ -21,7 +21,17 @@ export interface PipelineRunResult {
 
 export interface IntermediateOutputs {
     redact?: { removedFields: string[]; phiRemoved: boolean };
-    compress?: { savingsPct: number; originalTokens: number; compressedTokens: number };
+    compress?: {
+        savingsPct: number;
+        originalTokens: number;
+        compressedTokens: number;
+        tokensSaved: number;
+        ratio: number;
+        qualityScore?: number;
+        qualityOk?: boolean;
+        provider?: string;
+        aggressiveness?: number;
+    };
     extract?: { flagCount: number; criticalCount: number };
     numeric?: {
         prob?: number;
@@ -56,10 +66,18 @@ export function extractIntermediateOutputs(
     }
 
     if (event.step === 'COMPRESS' && event.eventType === 'STEP_DONE') {
+        const originalTokens = (payload.originalTokens as number) || 0;
+        const outputTokens = (payload.outputTokens as number) || 0;
         outputs.compress = {
-            savingsPct: (payload.savingsPct as number) || 0,
-            originalTokens: (payload.originalTokens as number) || 0,
-            compressedTokens: (payload.compressedTokens as number) || 0,
+            savingsPct: (payload.compressionPct as number) || 0,
+            originalTokens,
+            compressedTokens: outputTokens,
+            tokensSaved: (payload.tokensSaved as number) || (originalTokens - outputTokens),
+            ratio: (payload.compressionRatio as number) || (originalTokens / Math.max(1, outputTokens)),
+            qualityScore: (payload.qualityScore as number) || undefined,
+            qualityOk: (payload.qualityOk as boolean) ?? undefined,
+            provider: (payload.provider as string) || 'TOKENCO',
+            aggressiveness: (payload.aggressiveness as number) || undefined,
         };
     }
 

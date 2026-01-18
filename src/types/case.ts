@@ -95,7 +95,17 @@ export interface CaseData {
   currentStep?: string;
   intermediateOutputs?: {
     redact?: { removedFields: string[]; phiRemoved: boolean };
-    compress?: { savingsPct: number; originalTokens: number; compressedTokens: number };
+    compress?: {
+      savingsPct: number;
+      originalTokens: number;
+      compressedTokens: number;
+      tokensSaved: number;
+      ratio: number;
+      qualityScore?: number;
+      qualityOk?: boolean;
+      provider?: string;
+      aggressiveness?: number;
+    };
     extract?: { flagCount: number; criticalCount: number };
     numeric?: {
       prob?: number;

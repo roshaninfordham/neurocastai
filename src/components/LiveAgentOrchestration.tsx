@@ -160,14 +160,55 @@ export function LiveAgentOrchestration({ caseData, onRerun, onReconnect }: LiveA
                             </p>
                         </div>
 
-                        {/* COMPRESS */}
-                        <div className="bg-slate-50 rounded p-2">
-                            <p className="text-slate-500 font-medium">COMPRESS</p>
-                            <p className="text-slate-800">
-                                {intermediateOutputs.compress
-                                    ? <span className="text-green-600 font-semibold">{intermediateOutputs.compress.savingsPct}% saved</span>
-                                    : <span className="text-slate-400">Pending</span>}
-                            </p>
+                        {/* COMPRESS (TokenCo) - Enhanced metrics */}
+                        <div className="bg-gradient-to-r from-purple-50 to-slate-50 rounded p-2 col-span-2 border border-purple-200">
+                            <div className="flex items-center justify-between mb-1">
+                                <p className="text-purple-700 font-medium">COMPRESS</p>
+                                <span className="text-[10px] text-purple-500">powered by TokenCo</span>
+                            </div>
+                            {intermediateOutputs.compress ? (
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-green-600 font-bold text-sm">
+                                            {intermediateOutputs.compress.savingsPct}% saved
+                                        </span>
+                                        <span className="text-slate-600">
+                                            ({intermediateOutputs.compress.tokensSaved} tokens)
+                                        </span>
+                                        <span className="text-slate-500">
+                                            {intermediateOutputs.compress.ratio?.toFixed(1)}x ratio
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px]">
+                                        <span className="text-slate-500">
+                                            {intermediateOutputs.compress.originalTokens} → {intermediateOutputs.compress.compressedTokens} tokens
+                                        </span>
+                                        {/* Quality Badge */}
+                                        {intermediateOutputs.compress.qualityScore !== undefined && (
+                                            <Badge className={
+                                                intermediateOutputs.compress.qualityOk
+                                                    ? 'bg-green-600 text-[10px] px-1.5 py-0'
+                                                    : intermediateOutputs.compress.qualityScore >= 60
+                                                        ? 'bg-amber-600 text-[10px] px-1.5 py-0'
+                                                        : 'bg-red-600 text-[10px] px-1.5 py-0'
+                                            }>
+                                                {intermediateOutputs.compress.qualityOk
+                                                    ? `Quality OK (${intermediateOutputs.compress.qualityScore})`
+                                                    : intermediateOutputs.compress.qualityScore >= 60
+                                                        ? `Quality WARN (${intermediateOutputs.compress.qualityScore})`
+                                                        : `Fallback`}
+                                            </Badge>
+                                        )}
+                                        {intermediateOutputs.compress.provider === 'FALLBACK' && (
+                                            <Badge className="bg-slate-500 text-[10px] px-1.5 py-0">
+                                                FALLBACK
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <span className="text-slate-400">Pending</span>
+                            )}
                         </div>
 
                         {/* EXTRACT */}

@@ -57,6 +57,15 @@ The redaction step emits a `RedactionSummary` object with:
 
 Only `redactedText` and the accompanying `RedactionSummary` are permitted to flow into downstream tools or model prompts.
 
+## 4b) TokenCo Compression
+
+TokenCo compression operates exclusively on redacted text:
+
+- TokenCo API calls receive only the PHI-redacted text, never raw patient data
+- Compression aggressiveness is capped for high-risk cases (anticoagulants, unknown onset)
+- Critical safety-critical terms are validated post-compression via coverage guardrails
+- If guardrails fail, the system falls back to using the redacted text without compression
+
 ## 5) Safe Logging and Tracing Rules
 
 Logs and traces may store:

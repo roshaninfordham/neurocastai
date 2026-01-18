@@ -10,7 +10,6 @@ import type {
   RiskFlag,
   RoutingDecision,
   HandoffPacket,
-  VtpPacket,
   RedactionSummary,
 } from "@neurocast/shared";
 import { runStore } from "./runStore";
@@ -22,6 +21,13 @@ import {
   inferPrediction,
   inferClustering,
 } from "./woodwide/woodwideClient";
+import { compressText, TokenCoError, isTokenCoConfigured } from "./tokencoClient";
+import {
+  chooseAggressiveness,
+  validateCompression,
+  getLowerAggressiveness,
+  countHighRiskKeywords,
+} from "./compressionPolicy";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -160,23 +166,23 @@ function determineRouting(
     workflowState === "HOLD"
       ? "Hold workflow due to critical anticoagulant risk flag."
       : workflowState === "ESCALATE"
-      ? "Escalate case due to possible unknown onset / wake-up pattern."
-      : "Proceed with transfer workflow; no major blockers detected.";
+        ? "Escalate case due to possible unknown onset / wake-up pattern."
+        : "Proceed with transfer workflow; no major blockers detected.";
 
   const nextSteps: string[] =
     workflowState === "HOLD"
       ? [
-          "Confirm anticoagulant timing and last dose.",
-          "Discuss risk/benefit with stroke specialist.",
-          "Document decision and rationale in handoff packet.",
-        ]
+        "Confirm anticoagulant timing and last dose.",
+        "Discuss risk/benefit with stroke specialist.",
+        "Document decision and rationale in handoff packet.",
+      ]
       : workflowState === "ESCALATE"
-      ? [
+        ? [
           "Clarify exact time last known well if possible.",
           "Review advanced imaging criteria with hub center.",
           "Coordinate transfer with explicit timeline uncertainty notes.",
         ]
-      : [
+        : [
           "Confirm transfer destination and ETA.",
           "Ensure imaging and packet are attached to transfer.",
           "Notify stroke coordinator at receiving center.",
@@ -349,7 +355,31 @@ export function startPipelineRun(
       );
       recordLatency("REDACT", redactStart);
 
+      // COMPRESS step: TokenCo compression with policy-driven aggressiveness
       const compressStart = Date.now();
+      const redactedText = input.packet.rawText; // Already redacted by REDACT step
+
+      // Choose aggressiveness using our domain-aware policy
+      // Note: We use text scanning here since EXTRACT hasn't run yet
+      const textLower = redactedText.toLowerCase();
+      const caseHasHighRiskMeds =
+        textLower.includes("apixaban") ||
+        textLower.includes("eliquis") ||
+        textLower.includes("warfarin") ||
+        textLower.includes("xarelto") ||
+        textLower.includes("rivaroxaban") ||
+        textLower.includes("anticoagulant");
+      const caseHasUnknownOnset =
+        textLower.includes("unknown onset") ||
+        textLower.includes("wake-up stroke") ||
+        textLower.includes("woke up");
+
+      const aggressivenessResult = chooseAggressiveness({
+        redactedText,
+        caseHasHighRiskMeds,
+        caseHasUnknownOnset,
+      });
+
       runStore.appendEvent(
         runId,
         createEvent(
@@ -357,23 +387,180 @@ export function startPipelineRun(
           caseId,
           "COMPRESS",
           "STEP_STARTED",
-          "Compressing transfer packet text (TokenCo stub).",
+          "TokenCo compression started (policy-driven aggressiveness).",
           {
-            provider: "TOKENCO",
+            provider: "TokenCo",
+            model: process.env.TOKENCO_MODEL || "bear-1",
+            chosenAggressiveness: aggressivenessResult.aggressiveness,
+            reason: aggressivenessResult.reason,
+            riskFactors: aggressivenessResult.riskFactors,
           }
         )
       );
 
-      await delay(400);
-
-      const compression: CompressionResult = {
-        provider: "TOKENCO",
-        originalTokenEstimate: 1200,
-        compressedTokenEstimate: 350,
-        savingsPct: 71,
-        compressedTextPreview:
-          "Redacted summary of transfer packet suitable for downstream tools.",
+      // Initialize compression with default fallback value
+      let compression: CompressionResult = {
+        provider: "FALLBACK",
+        originalTokenEstimate: Math.ceil(redactedText.length / 4),
+        compressedTokenEstimate: Math.ceil(redactedText.length / 4),
+        savingsPct: 0,
+        compressedTextPreview: "Compression not yet run.",
       };
+      let compressedText = redactedText; // Fallback if compression fails
+      let compressionQualityScore = 100;
+      let compressionQualityOk = true;
+      let compressionWarnings: string[] = [];
+      let usedFallback = false;
+
+      if (!isTokenCoConfigured()) {
+        // TokenCo not configured - use fallback
+        runStore.appendEvent(
+          runId,
+          createEvent(
+            runId,
+            caseId,
+            "COMPRESS",
+            "WARNING",
+            "TokenCo API key not configured. Using redacted text as-is.",
+            { fallbackReason: "NO_API_KEY" }
+          )
+        );
+        usedFallback = true;
+        compression = {
+          provider: "FALLBACK",
+          originalTokenEstimate: Math.ceil(redactedText.length / 4),
+          compressedTokenEstimate: Math.ceil(redactedText.length / 4),
+          savingsPct: 0,
+          compressedTextPreview: "TokenCo unavailable; using redacted text.",
+        };
+      } else {
+        // Try TokenCo compression with retry on guardrail failure
+        let currentAggressiveness = aggressivenessResult.aggressiveness;
+        let attempts = 0;
+        const maxAttempts = 3;
+
+        while (attempts < maxAttempts) {
+          attempts++;
+          try {
+            const result = await compressText({
+              text: redactedText,
+              aggressiveness: currentAggressiveness,
+            });
+
+            compressedText = result.output;
+
+            // Validate compression against our guardrails
+            runStore.appendEvent(
+              runId,
+              createEvent(
+                runId,
+                caseId,
+                "COMPRESS",
+                "STEP_PROGRESS",
+                "Validating compression fidelity (critical-term guardrails)...",
+                {
+                  criticalTermsFound: countHighRiskKeywords(redactedText),
+                  guardrailMode: "coverage_check_v1",
+                }
+              )
+            );
+
+            const validation = validateCompression(redactedText, compressedText);
+            compressionQualityScore = validation.score;
+            compressionQualityOk = validation.ok;
+            compressionWarnings = validation.warnings;
+
+            if (validation.ok) {
+              // Compression passed guardrails
+              compression = {
+                provider: "TOKENCO",
+                originalTokenEstimate: result.originalTokens,
+                compressedTokenEstimate: result.outputTokens,
+                savingsPct: Math.round(result.percent),
+                compressedTextPreview: "Compressed summary preserving safety-critical terms.",
+              };
+              break;
+            } else {
+              // Guardrail failed - try with lower aggressiveness
+              if (attempts < maxAttempts) {
+                const lowerAggr = getLowerAggressiveness(currentAggressiveness);
+                runStore.appendEvent(
+                  runId,
+                  createEvent(
+                    runId,
+                    caseId,
+                    "COMPRESS",
+                    "WARNING",
+                    `Compression guardrails failed (score: ${validation.score}). Retrying with lower aggressiveness...`,
+                    {
+                      previousAggressiveness: currentAggressiveness,
+                      newAggressiveness: lowerAggr,
+                      missingTerms: validation.missingTerms,
+                    }
+                  )
+                );
+                currentAggressiveness = lowerAggr;
+              } else {
+                // Max attempts reached - use fallback
+                runStore.appendEvent(
+                  runId,
+                  createEvent(
+                    runId,
+                    caseId,
+                    "COMPRESS",
+                    "WARNING",
+                    "Compression fallback: using redacted text (guardrails failed after retries).",
+                    {
+                      finalScore: validation.score,
+                      missingTerms: validation.missingTerms,
+                    }
+                  )
+                );
+                usedFallback = true;
+                compressedText = redactedText;
+                compression = {
+                  provider: "FALLBACK",
+                  originalTokenEstimate: Math.ceil(redactedText.length / 4),
+                  compressedTokenEstimate: Math.ceil(redactedText.length / 4),
+                  savingsPct: 0,
+                  compressedTextPreview: "Guardrails failed; using redacted text for safety.",
+                };
+              }
+            }
+          } catch (error) {
+            const errorMessage = error instanceof TokenCoError
+              ? `TokenCo error: ${error.message}`
+              : "TokenCo request failed";
+
+            runStore.appendEvent(
+              runId,
+              createEvent(
+                runId,
+                caseId,
+                "COMPRESS",
+                "WARNING",
+                `${errorMessage}. Using fallback.`,
+                {
+                  errorType: error instanceof TokenCoError ? error.errorType : "UNKNOWN",
+                  statusCode: error instanceof TokenCoError ? error.statusCode : undefined,
+                }
+              )
+            );
+
+            usedFallback = true;
+            compression = {
+              provider: "FALLBACK",
+              originalTokenEstimate: Math.ceil(redactedText.length / 4),
+              compressedTokenEstimate: Math.ceil(redactedText.length / 4),
+              savingsPct: 0,
+              compressedTextPreview: `${errorMessage}; using redacted text.`,
+            };
+            break;
+          }
+        }
+      }
+
+      const compressionTimeMs = Date.now() - compressStart;
 
       runStore.appendEvent(
         runId,
@@ -382,12 +569,24 @@ export function startPipelineRun(
           caseId,
           "COMPRESS",
           "STEP_DONE",
-          "Compression complete with token savings.",
+          usedFallback
+            ? "Compression fallback used."
+            : `TokenCo compression complete: saved ${compression.originalTokenEstimate - compression.compressedTokenEstimate} tokens.`,
           {
             provider: compression.provider,
-            originalTokenEstimate: compression.originalTokenEstimate,
-            compressedTokenEstimate: compression.compressedTokenEstimate,
-            savingsPct: compression.savingsPct,
+            originalTokens: compression.originalTokenEstimate,
+            outputTokens: compression.compressedTokenEstimate,
+            tokensSaved: compression.originalTokenEstimate - compression.compressedTokenEstimate,
+            compressionRatio: compression.compressedTokenEstimate > 0
+              ? Math.round((compression.originalTokenEstimate / compression.compressedTokenEstimate) * 10) / 10
+              : 1,
+            compressionPct: compression.savingsPct,
+            compressionTimeSec: Math.round(compressionTimeMs / 100) / 10,
+            qualityScore: compressionQualityScore,
+            qualityOk: compressionQualityOk,
+            warningsCount: compressionWarnings.length,
+            usedFallback,
+            aggressiveness: aggressivenessResult.aggressiveness,
           }
         )
       );
@@ -460,7 +659,7 @@ export function startPipelineRun(
       let numeric: NumericMetrics;
       try {
         const { predModelId, clusterModelId } = await getOrCreateModels();
-        
+
         // Convert case to features
         const inferenceRow = caseToFeatures(input);
         const inferCsv = inferenceRowToCsv(inferenceRow);
