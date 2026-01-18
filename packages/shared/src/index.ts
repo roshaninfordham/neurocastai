@@ -103,8 +103,14 @@ export type StabilityStatus = "STABLE" | "BORDERLINE" | "UNSTABLE";
 export type AnomalySeverity = "LOW" | "MED" | "HIGH";
 
 export type NumericMetrics = {
-  provider: "WOOD_WIDE";
-  derivedTimers: {
+  provider?: string;
+  timers?: {
+    doorToCT?: number;
+    ctToDecision?: number;
+    timeSinceLKW?: number;
+    etaToCenter?: number;
+  };
+  derivedTimers?: {
     timeSinceLKWMin?: number;
     doorToCTMin?: number;
     ctToDecisionMin?: number;
@@ -112,17 +118,27 @@ export type NumericMetrics = {
   };
   stability: {
     status: StabilityStatus;
-    reasons: string[];
+    reasons?: string[];
+    flagCount?: number;
   };
   completeness: {
     scorePct: number;
-    missing: string[];
+    missing?: string[];
+    missingFields?: number;
   };
   anomalies?: {
     name: string;
     value: string;
     severity: AnomalySeverity;
   }[];
+  prediction?: {
+    needsEscalationProb: number;
+    confidence: "HIGH" | "MEDIUM" | "LOW";
+  };
+  clustering?: {
+    clusterId: number;
+    clusterName?: string;
+  };
 };
 
 export type RiskSeverity = "CRITICAL" | "WARNING" | "INFO";
@@ -208,11 +224,151 @@ export type HandoffPacket = {
   };
 };
 
+// Verified Transfer Packet (VTP) - Full Specification
+export type VtpMeta = {
+  vtp_version: string;
+  vtp_id: string;
+  case_id: string;
+  run_id: string;
+  created_at_iso: string;
+  environment: string;
+  synthetic_declared: boolean;
+  consent_acknowledged: boolean;
+};
+
+export type VtpPrivacy = {
+  redaction_summary: RedactionSummary;
+  phi_policy_version: string;
+};
+
+export type VtpCoordinationTimeline = {
+  last_known_well_iso?: string;
+  door_time_iso?: string;
+  ct_start_iso?: string;
+  cta_result_iso?: string;
+  decision_time_iso?: string;
+  derived_minutes: {
+    door_to_ct?: number;
+    ct_to_decision?: number;
+    time_since_lkw?: number;
+  };
+};
+
+export type VtpNumericReasoningWoodwide = {
+  provider: string;
+  prediction?: {
+    needs_escalation_prob: number;
+    threshold_used: number;
+  };
+  segment?: {
+    cluster_id: number;
+    cluster_label: string;
+  };
+  metrics: {
+    completeness_score_pct: number;
+    missing_items_count: number;
+    vitals_summary?: {
+      hr_max?: number;
+      sbp_max?: number;
+      sbp_min?: number;
+      spo2_min?: number;
+    };
+  };
+  inference_metadata?: {
+    model_id_pred?: string;
+    model_id_cluster?: string;
+    dataset_id_infer?: string;
+    latency_ms?: number;
+  };
+};
+
+export type VtpRiskFlag = {
+  id: string;
+  category: string;
+  severity: string;
+  label: string;
+  confidence: string;
+  source_anchor: string;
+  evidence_quote_redacted: string;
+  rule_id?: string;
+};
+
+export type VtpRoutingDecision = {
+  state: WorkflowState;
+  decision_reason: string;
+  triggered_rule_ids: string[];
+  recommended_next_steps: string[];
+};
+
+export type VtpAgentTraceSummary = {
+  pipeline_steps: string[];
+  warnings_count: number;
+  errors_count: number;
+  total_latency_ms: number;
+  token_savings_pct?: number;
+};
+
+export type VtpIntegrity = {
+  hash_sha256: string;
+  signature?: string;
+  signature_alg: string;
+  verification_status: "VERIFIED" | "FAILED" | "PENDING";
+};
+
+export type VerifiedTransferPacket = {
+  vtp_meta: VtpMeta;
+  privacy: VtpPrivacy;
+  coordination_timeline: VtpCoordinationTimeline;
+  numeric_reasoning_woodwide: VtpNumericReasoningWoodwide;
+  risk_flags: VtpRiskFlag[];
+  routing_decision: VtpRoutingDecision;
+  agent_trace_summary: VtpAgentTraceSummary;
+  integrity: VtpIntegrity;
+};
+
+export type VtpReceipt = {
+  runIdHash: string;
+  packetHash: string;
+  state: WorkflowState;
+  issuedAt: string;
+  issuer?: string;
+  txHash?: string;
+};
+
 export type VoiceSummary = {
   pushAlertsEnabled: boolean;
   lastAnnouncement?: string;
   allowedQuestionTypes: string[];
   blockedTopics: string[];
+};
+
+export type KairoDecisionType = "ALLOW" | "WARN" | "BLOCK" | "ESCALATE";
+
+export type KairoScanSummary = {
+  total: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+};
+
+export type KairoScanResult = {
+  decision: KairoDecisionType;
+  decision_reason: string;
+  risk_score: number;
+  summary: KairoScanSummary;
+  raw?: Record<string, unknown>;
+};
+
+export type KairoDecision = {
+  decision: KairoDecisionType;
+  decision_reason?: string;
+  riskScore?: number;
+  risk_score?: number;
+  analyzedAt: string;
+  summary?: string | KairoScanSummary;
+  findings?: KairoScanResult;
+  source?: string;
 };
 
 export type PipelineStep =
@@ -223,6 +379,7 @@ export type PipelineStep =
   | "NUMERIC"
   | "ROUTE"
   | "PACKET"
+  | "KAIRO_ANALYZE"
   | "VOICE_SUMMARY";
 
 export type PipelineEventType =
@@ -262,6 +419,8 @@ export type CaseDerivedOutputs = {
   decision?: RoutingDecision;
   handoff?: HandoffPacket;
   voice?: VoiceSummary;
+  vtp?: VerifiedTransferPacket;
+  kairo?: KairoDecision;
 };
 
 export type CaseDerived = {

@@ -9,8 +9,19 @@ import type {
   PipelineStep,
   RiskFlag,
   RoutingDecision,
+  HandoffPacket,
+  VtpPacket,
+  RedactionSummary,
 } from "@neurocast/shared";
 import { runStore } from "./runStore";
+import { buildVerifiedTransferPacket } from "./vtp/buildVtp";
+import { getOrCreateModels } from "./woodwide/woodwideBootstrap";
+import { caseToFeatures, inferenceRowToCsv } from "./woodwide/caseToFeatures";
+import {
+  uploadDataset,
+  inferPrediction,
+  inferClustering,
+} from "./woodwide/woodwideClient";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -91,7 +102,10 @@ function buildRiskFlags(input: CaseInput): RiskFlag[] {
   return flags;
 }
 
-function determineRouting(flags: RiskFlag[]): RoutingDecision {
+function determineRouting(
+  flags: RiskFlag[],
+  numeric?: NumericMetrics
+): RoutingDecision {
   let workflowState: RoutingDecision["state"] = "PROCEED";
   const triggeredRules: RoutingDecision["triggeredRules"] = [];
 
@@ -103,6 +117,10 @@ function determineRouting(flags: RiskFlag[]): RoutingDecision {
     f.label.toLowerCase().includes("wake-up")
   );
 
+  // Wood Wide numeric decision integration
+  const woodwideHighRisk = numeric?.prediction?.needsEscalationProb ?? 0 >= 0.65;
+  const woodwideClusterRisk = numeric?.clustering?.clusterId && numeric.clustering.clusterId >= 3;
+
   if (hasCriticalMeds) {
     workflowState = "HOLD";
     triggeredRules.push({
@@ -110,6 +128,15 @@ function determineRouting(flags: RiskFlag[]): RoutingDecision {
       name: "Critical anticoagulant present",
       explanation:
         "Detected a critical anticoagulant medication which requires hold-and-review before transfer.",
+    });
+  } else if (woodwideHighRisk || woodwideClusterRisk) {
+    workflowState = "ESCALATE";
+    triggeredRules.push({
+      id: "rule-woodwide-escalation",
+      name: "Wood Wide numeric escalation signal",
+      explanation: woodwideHighRisk
+        ? `Wood Wide prediction model indicates ${Math.round((numeric?.prediction?.needsEscalationProb ?? 0) * 100)}% probability of needing escalation.`
+        : `Case assigned to high-risk cluster segment ${numeric?.clustering?.clusterId}.`,
     });
   } else if (hasUnknownOnsetFlag) {
     workflowState = "ESCALATE";
@@ -125,7 +152,7 @@ function determineRouting(flags: RiskFlag[]): RoutingDecision {
       id: "rule-clear-path",
       name: "No high-risk blockers detected",
       explanation:
-        "No critical anticoagulant or unknown-onset patterns detected in synthetic packet.",
+        "No critical anticoagulant, Wood Wide high-risk signals, or unknown-onset patterns detected.",
     });
   }
 
@@ -164,6 +191,79 @@ function determineRouting(flags: RiskFlag[]): RoutingDecision {
   };
 }
 
+function buildHandoffPacket(
+  input: CaseInput,
+  outputs: {
+    compression?: CompressionResult;
+    riskFlags?: RiskFlag[];
+    numeric?: NumericMetrics;
+    decision?: RoutingDecision;
+  }
+): HandoffPacket {
+  const facilityLabel =
+    input.facility.type === "THROMBECTOMY_CENTER"
+      ? "Stroke center (hub)"
+      : "Non-specialized ED (spoke)";
+
+  const timelineMap: Record<string, string> = {};
+  input.timeline.forEach((t) => {
+    timelineMap[t.type] = t.time;
+  });
+
+  const vitalsStability = outputs.numeric?.stability.status ?? "UNKNOWN";
+
+  const risks = (outputs.riskFlags || []).map((r) => ({
+    severity: r.severity,
+    label: r.label,
+    evidenceQuote:
+      r.evidence.quote && r.evidence.quote.length > 120
+        ? r.evidence.quote.slice(0, 120) + "…"
+        : r.evidence.quote,
+    sourceAnchor: r.evidence.sourceAnchor,
+    confidence: r.confidence,
+  }));
+
+  const missing: string[] = [];
+  if (!input.packet.hasMedsList) missing.push("Complete medication list needed");
+  const hasCT = Boolean(timelineMap["CT_START"]);
+  const hasCTA = Boolean(timelineMap["CTA_RESULT"]);
+  if (!hasCT) missing.push("CT imaging not started");
+  if (!hasCTA) missing.push("CTA result pending");
+  if (!input.timeline.some((t) => t.type === "LAST_KNOWN_WELL")) {
+    missing.push("Last known well time not established");
+  }
+
+  const header = {
+    caseId: input.caseId,
+    facilityType: facilityLabel,
+    arrivalMode: input.arrivalMode,
+    workflowState: outputs.decision?.state ?? "HOLD",
+    completenessScorePct: outputs.numeric?.completeness.scorePct ?? 0,
+  };
+
+  const timelineTable = [
+    { event: "Last Known Well", time: timelineMap["LAST_KNOWN_WELL"], interval: undefined },
+    { event: "ED Arrival", time: timelineMap["ED_ARRIVAL"], interval: undefined },
+    { event: "CT Start", time: timelineMap["CT_START"], interval: undefined },
+    { event: "CTA Result", time: timelineMap["CTA_RESULT"], interval: undefined },
+    { event: "Decision Time", time: timelineMap["DECISION_TIME"], interval: undefined },
+  ];
+
+  return {
+    header,
+    timelineTable,
+    vitalsSummary: {
+      stability: vitalsStability,
+    },
+    risks,
+    missingInfoChecklist: missing,
+    coordinationNextSteps: outputs.decision?.nextSteps ?? [],
+    export: {
+      text: `NeuroCast AI coordination summary for case ${input.caseId}`,
+    },
+  };
+}
+
 export function startPipelineRun(
   runId: string,
   caseId: string,
@@ -174,6 +274,11 @@ export function startPipelineRun(
   (async () => {
     const startedAt = Date.now();
     const stageLatencies: Partial<Record<PipelineStep, number>> = {};
+    let redactionSummary: RedactionSummary = {
+      phiRemoved: false,
+      removedFields: [],
+      method: "REGEX_DEMO",
+    };
 
     const recordLatency = (step: PipelineStep, startTime: number) => {
       stageLatencies[step] = Date.now() - startTime;
@@ -222,6 +327,11 @@ export function startPipelineRun(
       await delay(300);
 
       const removedFields = ["NAME", "DOB", "MRN"];
+      redactionSummary = {
+        phiRemoved: removedFields.length > 0,
+        removedFields,
+        method: "REGEX_DEMO",
+      };
 
       runStore.appendEvent(
         runId,
@@ -338,29 +448,83 @@ export function startPipelineRun(
           caseId,
           "NUMERIC",
           "STEP_STARTED",
-          "Computing numeric timers and completeness scores (Wood Wide stub)."
+          "Computing numeric timers and completeness scores (powered by Wood Wide).",
+          {
+            provider: "woodwide",
+            inputs: ["timeline", "vitals", "completeness", "flags"],
+          }
         )
       );
 
-      await delay(400);
+      // Bootstrap Wood Wide models if needed
+      let numeric: NumericMetrics;
+      try {
+        const { predModelId, clusterModelId } = await getOrCreateModels();
+        
+        // Convert case to features
+        const inferenceRow = caseToFeatures(input);
+        const inferCsv = inferenceRowToCsv(inferenceRow);
 
-      const numeric: NumericMetrics = {
-        provider: "WOOD_WIDE",
-        derivedTimers: {
-          timeSinceLKWMin: 90,
-          doorToCTMin: 20,
-          ctToDecisionMin: 10,
-          etaToCenterMin: 45,
-        },
-        stability: {
-          status: "STABLE",
-          reasons: [],
-        },
-        completeness: {
-          scorePct: 85,
-          missing: [],
-        },
-      };
+        // Upload inference dataset
+        const inferDatasetName = `neurocast_infer_${runId}`;
+        const { dataset_id: inferDatasetId } = await uploadDataset(inferCsv, inferDatasetName, true);
+
+        // Run prediction inference
+        const predResult = await inferPrediction(predModelId, inferDatasetId);
+        const needsEscalationProb = predResult.predictions[0]?.probability ?? 0;
+
+        // Run clustering inference
+        const clusterResult = await inferClustering(clusterModelId, inferDatasetId);
+        const clusterId = clusterResult.clusters[0]?.cluster_id ?? 0;
+
+        // Build numeric metrics from Wood Wide outputs
+        numeric = {
+          timers: {
+            doorToCT: inferenceRow.door_to_ct_min,
+            ctToDecision: inferenceRow.ct_to_decision_min,
+            timeSinceLKW: inferenceRow.time_since_lkw_min,
+          },
+          completeness: {
+            scorePct: inferenceRow.completeness_score_pct,
+            missingFields: inferenceRow.missing_items_count,
+          },
+          stability: {
+            status: inferenceRow.vitals_variance_score < 15 ? "STABLE" : "UNSTABLE",
+            flagCount: riskFlags.length,
+          },
+          anomalies: [],
+          provider: "Wood Wide",
+          prediction: {
+            needsEscalationProb,
+            confidence: needsEscalationProb > 0.7 ? "HIGH" : needsEscalationProb > 0.4 ? "MEDIUM" : "LOW",
+          },
+          clustering: {
+            clusterId,
+            clusterName: `Segment ${clusterId}`,
+          },
+        };
+      } catch (err) {
+        console.error("Wood Wide inference failed, using fallback:", err);
+        // Fallback to deterministic computation
+        const inferenceRow = caseToFeatures(input);
+        numeric = {
+          timers: {
+            doorToCT: inferenceRow.door_to_ct_min,
+            ctToDecision: inferenceRow.ct_to_decision_min,
+            timeSinceLKW: inferenceRow.time_since_lkw_min,
+          },
+          completeness: {
+            scorePct: inferenceRow.completeness_score_pct,
+            missingFields: inferenceRow.missing_items_count,
+          },
+          stability: {
+            status: inferenceRow.vitals_variance_score < 15 ? "STABLE" : "UNSTABLE",
+            flagCount: riskFlags.length,
+          },
+          anomalies: [],
+          provider: "Fallback (Wood Wide unavailable)",
+        };
+      }
 
       runStore.appendEvent(
         runId,
@@ -369,9 +533,13 @@ export function startPipelineRun(
           caseId,
           "NUMERIC",
           "STEP_DONE",
-          "Numeric metrics computed for case.",
+          "Numeric metrics computed for case (Wood Wide).",
           {
+            provider: numeric.provider,
             completenessScorePct: numeric.completeness.scorePct,
+            riskProb: numeric.prediction?.needsEscalationProb,
+            clusterId: numeric.clustering?.clusterId,
+            anomalies: numeric.anomalies?.length ?? 0,
           }
         )
       );
@@ -391,7 +559,7 @@ export function startPipelineRun(
 
       await delay(300);
 
-      const routingDecision = determineRouting(riskFlags);
+      const routingDecision = determineRouting(riskFlags, numeric);
 
       runStore.appendEvent(
         runId,
@@ -418,11 +586,34 @@ export function startPipelineRun(
           caseId,
           "PACKET",
           "STEP_STARTED",
-          "Assembling coordination handoff packet."
+          "Building NeuroCast Verified Transfer Packet (VTP)..."
         )
       );
 
       await delay(300);
+
+      // Build the VTP with all outputs
+      const vtp = buildVerifiedTransferPacket({
+        caseInput: input,
+        outputs: {
+          compression,
+          riskFlags,
+          numeric,
+          decision: routingDecision,
+          handoff: buildHandoffPacket(input, {
+            compression,
+            riskFlags,
+            numeric,
+            decision: routingDecision,
+          }),
+        },
+        runId,
+        metrics: {
+          totalLatencyMs: Date.now() - startedAt,
+          stageLatenciesMs: stageLatencies,
+        },
+        redactionSummary,
+      });
 
       runStore.appendEvent(
         runId,
@@ -431,7 +622,12 @@ export function startPipelineRun(
           caseId,
           "PACKET",
           "STEP_DONE",
-          "Handoff packet assembled for display in UI."
+          "Verified Transfer Packet assembled with cryptographic verification.",
+          {
+            vtp_id: vtp.vtp_meta.vtp_id,
+            hash_sha256: vtp.integrity.hash_sha256,
+            verification_status: vtp.integrity.verification_status,
+          }
         )
       );
       recordLatency("PACKET", packetStart);
@@ -453,6 +649,20 @@ export function startPipelineRun(
           riskFlags,
           numeric,
           decision: routingDecision,
+          vtp,
+          handoff: buildHandoffPacket(input, {
+            compression,
+            riskFlags,
+            numeric,
+            decision: routingDecision,
+          }),
+          kairo: {
+            decision: "ALLOW",
+            riskScore: 0,
+            analyzedAt: new Date().toISOString(),
+            summary: "Simulated Kairo pre-deploy analysis. Configure KAIRO_API_KEY to enable.",
+            source: "kairo-simulated",
+          },
         },
         metrics,
         events,

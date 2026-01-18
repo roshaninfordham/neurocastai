@@ -129,6 +129,25 @@ export function CommandCenter({ caseData, onGenerateHandoff, onOpenEvidence, onR
                 <p className="text-sm font-medium text-slate-600 mb-1">Decision Reason:</p>
                 <p className="text-sm">{caseData.workflowReason}</p>
               </div>
+              
+              {/* Wood Wide Numeric Confidence */}
+              {caseData.derived?.outputs?.numeric?.prediction && (
+                <div className="border-l-2 border-purple-400 pl-3">
+                  <p className="text-xs font-semibold text-purple-700">
+                    Wood Wide Numeric Confidence:
+                  </p>
+                  <p className="text-sm">
+                    {Math.round(caseData.derived.outputs.numeric.prediction.needsEscalationProb * 100)}% escalation probability 
+                    ({caseData.derived.outputs.numeric.prediction.confidence.toLowerCase()})
+                    {caseData.derived.outputs.numeric.clustering && (
+                      <span className="ml-2 text-slate-600">
+                        — Cluster: Segment {caseData.derived.outputs.numeric.clustering.clusterId}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+              
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-2">Next Steps:</p>
                 <ul className="space-y-1">

@@ -1,4 +1,4 @@
-import type { PipelineEvent, PipelineMetrics, HandoffPacket } from '@neurocast/shared';
+import type { PipelineEvent, PipelineMetrics, HandoffPacket, CaseDerived, VerifiedTransferPacket } from '@neurocast/shared';
 
 export type WorkflowState = 'PROCEED' | 'HOLD' | 'ESCALATE';
 export type FacilityType = 'spoke' | 'hub';
@@ -87,6 +87,8 @@ export interface CaseData {
   pipelineEvents?: PipelineEvent[];
   metrics?: PipelineMetrics;
   handoffPacket?: HandoffPacket;
+  derived?: CaseDerived;
+  vtp?: VerifiedTransferPacket | any; // Support both new and legacy VTP formats
 }
 
 export interface VoiceAnnouncement {

@@ -8,6 +8,7 @@ import { EvidenceAudit } from './components/pages/EvidenceAudit';
 import { HandoffPacket } from './components/pages/HandoffPacket';
 import { VoiceCommander } from './components/pages/VoiceCommander';
 import { Observability } from './components/pages/Observability';
+// import { Products } from './components/pages/Products';
 import { CaseData, VoiceAnnouncement, VitalStability } from './types/case';
 import { DEMO_CASES, generateMockVitals, MOCK_COMPRESSION_STATS } from './lib/mockData';
 import { calculateCompletenessScore, getMissingItems, calculateTimeDiff, determineVitalStability } from './lib/caseUtils';
@@ -198,20 +199,34 @@ export default function App() {
           ? numericInsights.completeness
           : existing.completenessScore;
 
-      const handoffPacket = buildHandoffPacketFromCase(
-        {
-          ...existing,
-          workflowState,
-          workflowReason,
-          triggeredRule,
-          nextSteps,
-          compressionStats: compressionStats || existing.compressionStats,
-          numericInsights: numericInsights || existing.numericInsights,
-          completenessScore,
-          riskFlags,
-        },
-        derived
-      );
+      const missingItems = derived.outputs.numeric?.completeness.missing || existing.missingItems;
+
+      const vtp = derived.outputs.vtp;
+
+      const handoffPacket = derived.outputs.handoff
+        ? {
+            header: derived.outputs.handoff.header,
+            timelineTable: derived.outputs.handoff.timelineTable,
+            vitalsSummary: derived.outputs.handoff.vitalsSummary,
+            risks: derived.outputs.handoff.risks,
+            missingInfoChecklist: derived.outputs.handoff.missingInfoChecklist,
+            coordinationNextSteps: derived.outputs.handoff.coordinationNextSteps,
+            export: derived.outputs.handoff.export,
+          }
+        : buildHandoffPacketFromCase(
+            {
+              ...existing,
+              workflowState,
+              workflowReason,
+              triggeredRule,
+              nextSteps,
+              compressionStats: compressionStats || existing.compressionStats,
+              numericInsights: numericInsights || existing.numericInsights,
+              completenessScore,
+              riskFlags,
+            },
+            derived
+          );
 
       return {
         ...prev,
@@ -225,9 +240,12 @@ export default function App() {
           compressionStats: compressionStats || existing.compressionStats,
           numericInsights: numericInsights || existing.numericInsights,
           completenessScore,
+          missingItems,
           riskFlags,
           metrics: derived.metrics,
           handoffPacket,
+          vtp,
+          derived,
           pipelineStatus: {
             compression: 'complete',
             extraction: 'complete',
@@ -436,14 +454,32 @@ export default function App() {
 
     source.addEventListener('done', async () => {
       try {
-        const response = await fetch(`/api/run/result?runId=${encodeURIComponent(runId)}`);
-        if (response.ok) {
-          const data = (await response.json()) as { status: string; result: CaseDerived | null };
-          if (data.result) {
-            applyDerivedResultToCase(data.result);
+        // Retry loop to handle 409 (still RUNNING)
+        let attempts = 0;
+        let resultLoaded = false;
+        while (attempts < 10 && !resultLoaded) {
+          const response = await fetch(`/api/run/result?runId=${encodeURIComponent(runId)}`);
+          if (response.status === 200) {
+            const data = (await response.json()) as { status: string; result: CaseDerived | null };
+            if (data.result) {
+              applyDerivedResultToCase(data.result);
+              resultLoaded = true;
+              break;
+            }
+          } else if (response.status === 409) {
+            await new Promise((res) => setTimeout(res, 300));
+            attempts += 1;
+            continue;
+          } else {
+            // 400/404/500
+            break;
           }
         }
-        toast.success('Pipeline execution complete');
+        if (resultLoaded) {
+          toast.success('Report generated');
+        } else {
+          toast.error('Pipeline completed but result not ready');
+        }
       } catch {
         toast.error('Pipeline completed but result could not be loaded');
       } finally {
@@ -801,7 +837,11 @@ export default function App() {
             />
           )}
 
-          {!currentCase && currentPage !== 'start' && (
+          {currentPage === 'products' && (
+            <Products />
+          )}
+
+          {!currentCase && currentPage !== 'start' && currentPage !== 'products' && (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <p className="text-slate-600 mb-4">No active case selected</p>

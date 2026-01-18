@@ -5,10 +5,11 @@ import {
   FileSearch, 
   FileText, 
   Mic, 
-  BarChart3 
+  BarChart3,
+  Package
 } from 'lucide-react';
 
-export type Page = 'start' | 'command' | 'evidence' | 'handoff' | 'voice' | 'observability';
+export type Page = 'start' | 'command' | 'evidence' | 'handoff' | 'voice' | 'observability' | 'products';
 
 interface SidebarProps {
   currentPage: Page;
@@ -22,6 +23,7 @@ const navItems: { id: Page; label: string; icon: any }[] = [
   { id: 'handoff', label: 'Handoff Packet', icon: FileText },
   { id: 'voice', label: 'Voice Commander', icon: Mic },
   { id: 'observability', label: 'Observability', icon: BarChart3 },
+  // { id: 'products', label: 'Products', icon: Package }, // TODO: Enable after fixing build
 ];
 
 export function Sidebar({ currentPage, onPageChange }: SidebarProps) {

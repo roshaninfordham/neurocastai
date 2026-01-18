@@ -49,6 +49,11 @@ class RunStore {
     return this.runs.get(runId);
   }
 
+  getResult(runId: string): CaseDerived | undefined {
+    const entry = this.runs.get(runId);
+    return entry?.result;
+  }
+
   appendEvent(runId: string, event: PipelineEvent): void {
     const entry = this.runs.get(runId);
     if (!entry) {

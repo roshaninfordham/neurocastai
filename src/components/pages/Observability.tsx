@@ -2,8 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { ExternalLink, CheckCircle2, XCircle, ArrowLeft } from 'lucide-react';
+import { ExternalLink, CheckCircle2, XCircle, ArrowLeft, Copy } from 'lucide-react';
 import { CaseData } from '../../types/case';
+import { toast } from 'sonner';
 
 interface ObservabilityProps {
   caseData: CaseData;
@@ -65,6 +66,10 @@ const EVAL_CASES = [
 
 export function Observability({ caseData, onBack }: ObservabilityProps) {
   const stageLatencies = caseData.metrics?.stageLatenciesMs;
+  const compression = caseData.compressionStats;
+  const vtp = caseData.vtp || caseData.derived?.outputs.vtp;
+  const kairo = caseData.derived?.outputs.kairo;
+  const totalLatency = caseData.metrics?.totalLatencyMs;
 
   const dynamicSteps = stageLatencies
     ? Object.entries(stageLatencies).map(([step, latency]) => ({
@@ -105,14 +110,8 @@ export function Observability({ caseData, onBack }: ObservabilityProps) {
               </div>
 
               <div className="space-y-2">
-                {(dynamicSteps || [
-                  { step: 'Token Compression', status: 'complete', duration: '0.8s' },
-                  { step: 'Risk Extraction', status: 'complete', duration: '1.2s' },
-                  { step: 'Numeric Computation', status: 'complete', duration: '0.3s' },
-                  { step: 'Routing Gate', status: 'complete', duration: '0.2s' },
-                  { step: 'Handoff Generation', status: 'complete', duration: '0.5s' },
-                ]).map((step, idx) => (
-                  <div 
+                {(dynamicSteps || []).map((step, idx) => (
+                  <div
                     key={idx}
                     className="flex items-center justify-between p-3 bg-slate-50 border rounded-lg"
                   >
@@ -128,6 +127,11 @@ export function Observability({ caseData, onBack }: ObservabilityProps) {
                     </div>
                   </div>
                 ))}
+                {!dynamicSteps && (
+                  <div className="p-3 text-xs text-slate-500 bg-slate-50 border rounded">
+                    Latency metrics will appear after a backend run completes.
+                  </div>
+                )}
               </div>
 
               <Button variant="outline" className="w-full gap-2">
@@ -145,11 +149,11 @@ export function Observability({ caseData, onBack }: ObservabilityProps) {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between p-2 bg-slate-50 rounded">
                   <span className="text-slate-600">Total Pipeline Time:</span>
-                  <span className="font-semibold">3.0s</span>
+                  <span className="font-semibold">{totalLatency ? `${(totalLatency / 1000).toFixed(2)}s` : '—'}</span>
                 </div>
                 <div className="flex justify-between p-2 bg-slate-50 rounded">
                   <span className="text-slate-600">Token Savings (TokenCo):</span>
-                  <span className="font-semibold text-green-600">72.6%</span>
+                  <span className="font-semibold text-green-600">{compression ? `${compression.savings}%` : '—'}</span>
                 </div>
                 <div className="flex justify-between p-2 bg-slate-50 rounded">
                   <span className="text-slate-600">Flags Extracted:</span>
@@ -159,6 +163,118 @@ export function Observability({ caseData, onBack }: ObservabilityProps) {
                   <span className="text-slate-600">Completeness Score:</span>
                   <span className="font-semibold">{caseData.completenessScore}%</span>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Wood Wide Numeric Decision Card */}
+          {caseData.derived?.outputs?.numeric && (
+            <Card className="bg-purple-50 border-purple-200">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <span className="text-purple-700">Wood Wide Numeric Engine</span>
+                </CardTitle>
+                <CardDescription>AI-powered decision workflow analysis</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex justify-between p-2 bg-white rounded">
+                  <span className="text-slate-600">Provider:</span>
+                  <span className="font-semibold">{caseData.derived.outputs.numeric.provider || 'Wood Wide'}</span>
+                </div>
+                {caseData.derived.outputs.numeric.prediction && (
+                  <>
+                    <div className="flex justify-between p-2 bg-white rounded">
+                      <span className="text-slate-600">Escalation Probability:</span>
+                      <span className="font-semibold text-purple-700">
+                        {Math.round(caseData.derived.outputs.numeric.prediction.needsEscalationProb * 100)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between p-2 bg-white rounded">
+                      <span className="text-slate-600">Confidence:</span>
+                      <Badge variant={
+                        caseData.derived.outputs.numeric.prediction.confidence === 'HIGH' ? 'default' :
+                        caseData.derived.outputs.numeric.prediction.confidence === 'MEDIUM' ? 'secondary' : 'outline'
+                      }>
+                        {caseData.derived.outputs.numeric.prediction.confidence}
+                      </Badge>
+                    </div>
+                  </>
+                )}
+                {caseData.derived.outputs.numeric.clustering && (
+                  <div className="flex justify-between p-2 bg-white rounded">
+                    <span className="text-slate-600">Cluster Segment:</span>
+                    <span className="font-semibold">
+                      {caseData.derived.outputs.numeric.clustering.clusterName || `Segment ${caseData.derived.outputs.numeric.clustering.clusterId}`}
+                    </span>
+                  </div>
+                )}
+                {caseData.derived.outputs.numeric.timers && (
+                  <div className="flex justify-between p-2 bg-white rounded">
+                    <span className="text-slate-600">Door-to-CT:</span>
+                    <span className="font-semibold">{caseData.derived.outputs.numeric.timers.doorToCT || 0} min</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* VTP Integrity Proof */}
+          {vtp && (
+            <Card className="bg-slate-50 border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-base">VTP Integrity Proof</CardTitle>
+                <CardDescription>Cryptographic verification for audit trail</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-xs">
+                <p className="text-slate-700">
+                  ✓ VTP hash computed from canonicalized coordination-only packet
+                </p>
+                <p className="text-slate-700">
+                  ✓ PHI redacted per PHI-RULES-1 policy
+                </p>
+                <p className="text-slate-700">
+                  ✓ Replay-verifiable with deterministic JSON serialization
+                </p>
+                <p className="text-slate-700">
+                  ✓ Ready for immutable storage (testnet deployment Kairo-gated)
+                </p>
+                {vtp.integrity && (
+                  <div className="pt-2 mt-2 border-t">
+                    <p className="text-slate-600 mb-1">Hash (SHA-256):</p>
+                    <p className="font-mono text-[10px] break-all bg-white p-2 rounded border">
+                      {vtp.integrity.hash_sha256 || vtp.packetHash}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Verified Transfer Packet</CardTitle>
+              <CardDescription>Immutable hash for handoff integrity</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex justify-between p-2 bg-slate-50 rounded">
+                <span className="text-slate-600">VTP ID:</span>
+                <span className="font-semibold">{vtp?.vtpId ?? '—'}</span>
+              </div>
+              <div className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                <div>
+                  <p className="text-slate-600">Packet Hash:</p>
+                  <p className="font-mono text-xs text-slate-800 break-all">{vtp?.packetHash ?? '—'}</p>
+                </div>
+                {vtp?.packetHash && (
+                  <Button variant="outline" size="sm" className="gap-1" onClick={() => { navigator.clipboard.writeText(vtp.packetHash); toast.success('Packet hash copied'); }}>
+                    <Copy className="size-3" />
+                    Copy
+                  </Button>
+                )}
+              </div>
+              <div className="flex justify-between p-2 bg-slate-50 rounded">
+                <span className="text-slate-600">Missing items:</span>
+                <span className="font-semibold">{vtp?.missingItems?.length ?? caseData.missingItems.length}</span>
               </div>
             </CardContent>
           </Card>
@@ -272,6 +388,32 @@ export function Observability({ caseData, onBack }: ObservabilityProps) {
                 <li>Workflow state routing correctness</li>
                 <li>Handoff completeness verification</li>
               </ul>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6 mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Kairo Security Decision</CardTitle>
+            <CardDescription>Deploy gate result for TransferReceiptRegistry</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex justify-between p-2 bg-slate-50 rounded">
+              <span className="text-slate-600">Decision:</span>
+              <Badge className="bg-green-600">{kairo?.decision ?? 'PENDING'}</Badge>
+            </div>
+            <div className="flex justify-between p-2 bg-slate-50 rounded">
+              <span className="text-slate-600">Risk Score:</span>
+              <span className="font-semibold">{kairo?.riskScore ?? 0}</span>
+            </div>
+            <div className="flex justify-between p-2 bg-slate-50 rounded">
+              <span className="text-slate-600">Analyzed At:</span>
+              <span className="text-xs">{kairo?.analyzedAt ? new Date(kairo.analyzedAt).toLocaleString() : 'Not analyzed'}</span>
+            </div>
+            <div className="p-3 bg-slate-50 rounded text-xs text-slate-700">
+              {kairo?.summary ?? 'Run scripts/kairoCheck.ts to populate this from the Kairo API.'}
             </div>
           </CardContent>
         </Card>

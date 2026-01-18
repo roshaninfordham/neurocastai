@@ -41,18 +41,18 @@ For each incoming stroke transfer, NeuroCast:
 
 The pipeline is designed as an auditable control layer.
 
-1. Ingest
-2. Token Company compression
-3. LLM-based risk extraction
-4. Wood Wide numeric metrics
-5. Deterministic routing gate
-6. Handoff packet generation
-7. Voice agent and safe Q and A (LiveKit)
-8. Observability and evals (Phoenix)
+1. **Ingest**: Normalize case input (packet, timeline, vitals)
+2. **Redact**: Remove PHI (names, DOBs, MRNs) before compression
+3. **Compress**: TokenCo reduces packet size by ~71% for downstream LLM steps
+4. **Extract**: LLM extracts coordination risk flags with evidence quotes
+5. **Numeric**: **Wood Wide AI** computes timers, completeness, prediction probability, and clustering segments
+6. **Route**: Deterministic policy gate (PROCEED/HOLD/ESCALATE) using Wood Wide insights + rule-based flags
+7. **Packet**: Generate one-page handoff with VTP hash
+8. **Voice**: LiveKit real-time voice Q&A (planned)
 
-Stochastic LLM steps are upstream, while the final workflow state is produced by deterministic policy code.
+Stochastic LLM steps are upstream, while the final workflow state is produced by deterministic policy code that composes Wood Wide numeric insights with safety rules.
 
-See `docs/ARCHITECTURE.md` and `SAFETY.md` for details.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [SAFETY.md](SAFETY.md), and [WOODWIDE_INTEGRATION.md](WOODWIDE_INTEGRATION.md) for details.
 
 ## Tech stack
 
@@ -60,13 +60,13 @@ See `docs/ARCHITECTURE.md` and `SAFETY.md` for details.
 - Monorepo: pnpm workspaces under `apps` and `packages`
 - Shared types: `@neurocast/shared` package for `CaseInput` and `CaseDerived`
 - Data: synthetic demo cases under `data/demo_cases`
-- Planned sponsor integrations:
-  - Token Company for compression
-  - LeanMCP for MCP deployment
-  - Wood Wide for numeric KPIs
-  - LiveKit for voice agent
-  - Phoenix for traces and evals
-  - Kairo (optional) for audit hash ledger
+- **Sponsor integrations**:
+  - **Wood Wide AI**: Numeric decision workflow engine (prediction + clustering models)
+  - **TokenCo**: LLM compression with 71% token savings
+  - **Phoenix**: Observability and pipeline event tracing
+  - **LiveKit**: Real-time voice commander (planned)
+  - **LeanMCP**: Model Context Protocol deployment (planned)
+  - **Kairo**: Smart contract security analysis for VTP receipt registry (optional)
 
 ## Local development
 
