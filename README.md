@@ -43,8 +43,48 @@ For each incoming stroke transfer, NeuroCast:
 - Routes the case to PROCEED, HOLD, or ESCALATE via a policy gate
 - Generates a one-page handoff packet with VTP verification
 - Supports real-time voice Q&A about the case
-- **Home Check-In**: Enables patients to initiate verified transfer cases via video telemetry and AI triage
 - Logs traces and evals for observability
+
+---
+
+## 🏠 Home Check-In Feature (NEW)
+
+Home Check-In enables **patient-side autonomous triage** using AI vision detection for stroke symptoms, generating a Verified Transfer Packet (VTP) that can be sent to receiving hospitals.
+
+### Feature Flow
+
+```
+VIDEO_DETECT → TRIAGE → NOTIFY → VTP
+     │            │          │        │
+     │            │          │        └── Generate SHA-256 signed packet
+     │            │          └── EMS/Hospital/Family notifications
+     │            └── Gemini AI triage decision
+     └── Overshoot AI real-time detection (~1 result/sec)
+```
+
+### Key Capabilities
+
+| Step | Technology | Output |
+|------|------------|--------|
+| **VIDEO_DETECT** | Overshoot AI SDK | Real-time stroke symptom signals |
+| **TRIAGE** | Google Gemini | Urgency level + recommended actions |
+| **NOTIFY** | Notification API | EMS, Hospital, Family alerts |
+| **VTP** | SHA-256 + Trust Layers | Verified Transfer Packet |
+
+### Trust Layer Integration
+
+- **Wood Wide AI**: Numeric risk probability calculation
+- **Kairo AI**: Smart contract security gating (ALLOW/WARN/BLOCK)
+
+### Demo at `/home-checkin`
+
+1. Click **VIDEO_DETECT** → Choose camera or upload video
+2. Watch **Evidence Log** fill with real-time AI signals
+3. Click **TRIAGE** → AI generates urgency assessment
+4. Click **NOTIFY** → Simulate sending notifications
+5. Click **VTP** → Generate verified transfer packet with hash
+
+📖 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical flowcharts.
 
 ---
 

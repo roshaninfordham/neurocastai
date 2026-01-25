@@ -428,17 +428,23 @@ export type CaseDerivedOutputs = {
   homeCheckin?: HomeCheckinResult;
 };
 
+export type OvershootSignal = {
+  signal_type: "no_concern" | "possible_stroke" | "high_concern" | "uncertain";
+  severity: "low" | "medium" | "high" | "critical";
+  confidence: number;
+  face_droop?: boolean;
+  arm_weakness?: boolean;
+  speech_difficulty?: boolean;
+  gait_instability?: boolean;
+  notes: string;
+};
+
 export type OvershootNormalizedResult = {
   ts: string;
   raw: string;
-  parsed?: {
-    signal_type?: string;
-    severity?: string;
-    confidence?: number;
-    notes?: string;
-  };
-  inferenceLatencyMs?: number;
-  totalLatencyMs?: number;
+  parsed: OvershootSignal | null;
+  inferenceLatencyMs: number;
+  totalLatencyMs: number;
   source: "camera" | "video";
 };
 
